@@ -4,7 +4,6 @@ import JournalModal from "./components/JournalModal";
 import PassportGallery from "./components/PassportGallery";
 import RulesModal from "./components/RulesModal";
 import FeedbackModal from "./components/FeedbackModal";
-import VideoModal from "./components/VideoModal";
 import { BookOpen, Map as MapIcon, Plus, HelpCircle, MessageCircle, PlayCircle } from "lucide-react";
 
 function App() {
@@ -13,7 +12,6 @@ function App() {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [isRulesOpen, setIsRulesOpen] = useState(false);
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-    const [isVideoModalOpen, setIsVideoModalOpen] = useState(true); // Default to open on first visit
     const [selectedCountry, setSelectedCountry] = useState(null);
 
     // Load from LocalStorage
@@ -67,7 +65,7 @@ function App() {
 
                 <div className="flex items-center gap-2 sm:gap-3">
                     <button
-                        onClick={() => setIsVideoModalOpen(true)}
+                        onClick={() => {}}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-stone-600 hover:bg-stone-100 rounded-full transition-colors text-sm font-medium border border-stone-200 shadow-sm"
                         title="Watch Explainer"
                     >
@@ -116,11 +114,6 @@ function App() {
             </main>
 
             {/* Modals */}
-            <VideoModal
-                isOpen={isVideoModalOpen}
-                onClose={() => setIsVideoModalOpen(false)}
-            />
-
             <RulesModal
                 isOpen={isRulesOpen}
                 onClose={() => setIsRulesOpen(false)}
