@@ -13,10 +13,13 @@ const VideoModal = ({ isOpen, onClose }) => {
                 className="bg-stone-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden relative border border-stone-800 w-full max-w-4xl aspect-video animate-in zoom-in-95"
                 onClick={(e) => e.stopPropagation()}
             >
+                {/* Cover Google Drive's built-in pop-out button (top-right corner of iframe) */}
+                <div className="absolute top-0 right-0 w-16 h-12 bg-stone-900 z-10 pointer-events-none" />
+
                 {/* Always-visible X button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-3 right-3 z-20 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors"
+                    className="absolute top-2 right-2 z-20 p-1.5 bg-stone-900 hover:bg-stone-700 rounded-full text-white transition-colors"
                     aria-label="Close"
                 >
                     <X size={18} />
