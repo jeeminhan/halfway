@@ -65,7 +65,7 @@ function App() {
 
                 <div className="flex items-center gap-2 sm:gap-3">
                     <button
-                        onClick={() => {}}
+                        onClick={() => window.open("https://drive.google.com/file/d/1EgH6v_Wyaplxamoo-mP6_14hyUU9gLFitnCiySeLWEI/view", "_blank")}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-stone-600 hover:bg-stone-100 rounded-full transition-colors text-sm font-medium border border-stone-200 shadow-sm"
                         title="Watch Explainer"
                     >
