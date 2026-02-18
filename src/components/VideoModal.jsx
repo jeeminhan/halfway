@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, PlayCircle, Minimize2, Maximize2, Map } from "lucide-react";
+import { X, Map } from "lucide-react";
 
 const VideoModal = ({ isOpen, onClose }) => {
     const [isMinimized, setIsMinimized] = useState(false);
@@ -26,29 +26,14 @@ const VideoModal = ({ isOpen, onClose }) => {
                 : "w-full max-w-4xl aspect-video animate-in zoom-in-95"
                 }`}>
 
-                {/* Header Overlay (visible on hover) */}
-                <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center opacity-0 hover:opacity-100 transition-opacity duration-300 z-10">
-                    <div className="flex items-center gap-2 text-white">
-                        <PlayCircle size={20} className="text-yellow-400" />
-                        <span className="font-bold tracking-tight uppercase text-xs sm:text-sm">
-                            {isMinimized ? "Explainer" : "Explainer Video"}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {!isMinimized ? (
-                            <button onClick={() => setIsMinimized(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors" title="Minimize">
-                                <Minimize2 size={20} />
-                            </button>
-                        ) : (
-                            <button onClick={() => setIsMinimized(false)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors" title="Maximize">
-                                <Maximize2 size={20} />
-                            </button>
-                        )}
-                        <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors">
-                            <X size={20} />
-                        </button>
-                    </div>
-                </div>
+                {/* Always-visible X button */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); onClose(); }}
+                    className="absolute top-3 right-3 z-20 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white transition-colors"
+                    aria-label="Close"
+                >
+                    <X size={18} />
+                </button>
 
                 {/* Video Iframe - PERSISTENT so it doesn't restart */}
                 <div className="flex-1 w-full relative pointer-events-auto">
@@ -76,12 +61,6 @@ const VideoModal = ({ isOpen, onClose }) => {
                     </div>
                 )}
 
-                {/* Floating Tooltip for Backdrop (Only in full mode) */}
-                {!isMinimized && (
-                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white/40 text-xs font-bold tracking-widest uppercase pointer-events-none">
-                        Click outside to start playing
-                    </div>
-                )}
             </div>
         </div>
     );
