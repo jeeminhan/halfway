@@ -6,20 +6,21 @@ import HalfwayQuestion from './HalfwayQuestion'
 import CountryPicker from './CountryPicker'
 
 const TOPICS_PER_GAME = 3
-const FALLBACK_QUESTION = "You've both described a belonging you once had — or are still looking for. Is there something, or someone, who could give you that in a way that doesn't depend on where you are?"
+const FALLBACK_QUESTION = "What if the thing you're both homesick for isn't actually a place?"
 
 export default function EncounterFlow({ onSave, onClose }) {
-  const [step, setStep] = useState('who-you') // 'who-you' | 'who-them' | 'round' | 'generating' | 'halfway'
+  const [step, setStep] = useState('who-you') // 'who-you' | 'who-them' | 'loading-topics' | 'round' | 'generating' | 'halfway'
   const [person1, setPerson1] = useState({ city: '', country: '', name: '' })
   const [person2, setPerson2] = useState({ city: '', country: '', name: '' })
   const [topics] = useState(() => drawTopics(TOPICS_PER_GAME))
+  const [enrichedTopics, setEnrichedTopics] = useState(null)
   const [roundIndex, setRoundIndex] = useState(0)
   const [rounds, setRounds] = useState([])
   const [answer1, setAnswer1] = useState('')
   const [answer2, setAnswer2] = useState('')
   const [halfwayQuestion, setHalfwayQuestion] = useState(null)
 
-  const currentTopic = topics[roundIndex]
+  const currentTopic = (enrichedTopics || topics)[roundIndex]
   const isLastRound = roundIndex === TOPICS_PER_GAME - 1
 
   const handleRoundSubmit = () => {
@@ -67,6 +68,38 @@ export default function EncounterFlow({ onSave, onClose }) {
     setStep('halfway')
   }
 
+  const generateTopics = async (p1, p2, drawnTopics) => {
+    setStep('loading-topics')
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 8000)
+      const res = await fetch('/api/generate-topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          person1City: p1.city,
+          person1Country: p1.country,
+          person2City: p2.city,
+          person2Country: p2.country,
+          topics: drawnTopics.map(t => ({ id: t.id, name: t.name })),
+        })
+      })
+      clearTimeout(timeout)
+      const data = await res.json()
+      if (data.questions && Array.isArray(data.questions)) {
+        const enriched = drawnTopics.map(t => {
+          const found = data.questions.find(q => q.id === t.id)
+          return found ? { ...t, question: found.question } : t
+        })
+        setEnrichedTopics(enriched)
+      }
+    } catch {
+      setEnrichedTopics(drawnTopics)
+    }
+    setStep('round')
+  }
+
   const handleSave = () => {
     onSave({
       id: `convo-${Date.now()}`,
@@ -109,10 +142,25 @@ export default function EncounterFlow({ onSave, onClose }) {
                 label="Them"
                 accentColor="sage"
                 onConfirm={(data) => {
-                  setPerson2(p => ({ ...p, country: data.country, city: data.city }))
-                  setStep('round')
+                  const p2 = { ...person2, country: data.country, city: data.city }
+                  setPerson2(p2)
+                  generateTopics(person1, p2, topics)
                 }}
               />
+            </motion.div>
+          )}
+
+          {step === 'loading-topics' && (
+            <motion.div
+              key="loading-topics"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center min-h-[70vh] space-y-5"
+            >
+              <div className="w-7 h-7 rounded-full border-2 border-terracotta border-t-transparent animate-spin" />
+              <p className="font-serif italic text-brown-deep/40 text-center text-sm">
+                Reading your worlds...
+              </p>
             </motion.div>
           )}
 

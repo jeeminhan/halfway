@@ -112,29 +112,31 @@ Return only the question text. No preamble, no explanation.
           const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
           const prompt = `
-You are generating one philosophical question for two people who just had a conversation together.
+You are generating the final question of a philosophical conversation between two people who just met.
 
 Person 1 is from ${person1City}${person1Country ? ', ' + person1Country : ''}.
 Person 2 is from ${person2City}${person2Country ? ', ' + person2Country : ''}.
 
-Their answers to three philosophical questions:
+Here is everything they said:
 
 ${person1Answers.map(a => `Person 1 on "${a.topic}": "${a.answer}"`).join('\n')}
 
 ${person2Answers.map(a => `Person 2 on "${a.topic}": "${a.answer}"`).join('\n')}
 
-Generate ONE question — the "Halfway Question" — that:
-- Finds the thread of longing that runs through BOTH people's answers
-- Names what both people are searching for but haven't found yet — belonging, home,
-  being fully known, something that lasts, something that can't be taken away
-- Gently opens the question of whether that longing points toward something —
-  or someone — beyond what either of them has already found
-- Is the kind of question that makes both people go quiet and lean forward
-- Does not mention Jesus, God, or religion by name — but should make someone
-  who knows the gospel immediately recognize the door it just opened
-- Feels like genuine human curiosity, not a script
-- Is warm, specific, and impossible to answer with a yes or no
-- Reads beautifully in italic serif — it should feel like a line from a novel
+Your job: find the ONE specific thing — a word, an image, a place, a person, a feeling — that appeared in BOTH of their answers, even if they used different words for it.
+
+Then generate ONE question that:
+- Names that specific shared thing directly — use their actual words or images, not abstractions
+- Asks whether that thing points toward something — or someone — they haven't found yet
+- Opens the question of whether there is a love, a home, a belonging, or a presence that could fully meet that longing — without naming God, Jesus, or religion directly
+- Feels like the most honest question in the room — the one both people are secretly already asking
+- Is short, specific, and impossible to answer with a yes or no
+- Does NOT start with "Both of you..." or "You both..." — find a more surprising entry into the question
+
+Examples of the right register:
+- "What if the hotpot and the Sunday morning are actually the same hunger?"
+- "Is there a version of home that doesn't require you to leave something behind to find it?"
+- "What would it mean to be known like that — not by a place or a person who could leave — but by something that couldn't?"
 
 Return only the question. No preamble, no explanation.
 `
@@ -144,6 +146,58 @@ Return only the question. No preamble, no explanation.
           res.end(JSON.stringify({ question }))
         } catch (err) {
           console.error('[Halfway dev error]', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'generation_failed', detail: err.message }))
+        }
+      })
+    })
+
+    server.middlewares.use('/api/generate-topics', async (req, res) => {
+      if (req.method !== 'POST') { res.statusCode = 405; res.end(); return }
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const {
+            person1City, person1Country,
+            person2City, person2Country,
+            topics,
+          } = JSON.parse(body)
+          const apiKey = process.env.GEMINI_API_KEY
+          if (!apiKey) throw new Error('No GEMINI_API_KEY in .env.local')
+
+          const genAI = new GoogleGenerativeAI(apiKey)
+          const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+          const prompt = `
+You are generating conversation questions for two people who just met:
+- Person 1 is from ${person1City}${person1Country ? ', ' + person1Country : ''}
+- Person 2 is from ${person2City}${person2Country ? ', ' + person2Country : ''}
+
+Generate one question for each of these ${topics.length} topics: ${topics.map(t => t.name).join(', ')}
+
+For each question:
+- Reference something culturally specific to BOTH cities — an actual place, tradition, food, ritual, season, or social norm that exists in those cultures
+- Frame it so both people can answer from their own world — it should feel like genuine curiosity between two people from different places
+- Have philosophical depth underneath — the surface is cultural, the underneath is about meaning, loss, belonging, or identity
+- Be a single conversational question, not an interview prompt
+- Feel warm and specific — "In Seoul, ___" or "Growing up in Toronto, ___" is better than "In your culture, ___"
+
+Return a JSON array with exactly ${topics.length} objects, one per topic, in the same order as the topics list:
+[
+  { "id": "topic-id", "question": "the question text" },
+  ...
+]
+Return only the JSON array. No preamble, no markdown code fences.
+`
+          const result = await model.generateContent([{ text: prompt }])
+          const text = result.response.text().trim()
+          const questions = JSON.parse(text)
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ questions }))
+        } catch (err) {
+          console.error('[Generate topics dev error]', err.message)
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: 'generation_failed', detail: err.message }))

@@ -6,7 +6,7 @@ const DEMO_STEPS = [
   { type: 'topic', icon: '🍂', name: 'Loss', question: 'What have you left behind that still travels with you?' },
   { type: 'answer1', text: '"Hotpot with my mom — I haven\'t found anything like it here"' },
   { type: 'answer2', text: '"The feeling of walking into my home church on a Sunday morning"' },
-  { type: 'halfway', text: 'You\'ve both described a belonging you once had — or are still looking for. Is there something, or someone, who could give you that in a way that doesn\'t depend on where you are?' },
+  { type: 'halfway', text: 'What if the hotpot and the Sunday morning are actually the same hunger — and neither of them is really what you\'re looking for?' },
 ]
 
 const STEP_DURATIONS = [1800, 2400, 2800, 2800, 4500]

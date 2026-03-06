@@ -12,29 +12,31 @@ export default async function handler(req, res) {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const prompt = `
-You are generating one philosophical question for two people who just had a conversation together.
+You are generating the final question of a philosophical conversation between two people who just met.
 
 Person 1 is from ${person1City}${person1Country ? ', ' + person1Country : ''}.
 Person 2 is from ${person2City}${person2Country ? ', ' + person2Country : ''}.
 
-Their answers to three philosophical questions:
+Here is everything they said:
 
-${person1Answers.map((a, i) => `Person 1 on "${a.topic}": "${a.answer}"`).join('\n')}
+${person1Answers.map(a => `Person 1 on "${a.topic}": "${a.answer}"`).join('\n')}
 
-${person2Answers.map((a, i) => `Person 2 on "${a.topic}": "${a.answer}"`).join('\n')}
+${person2Answers.map(a => `Person 2 on "${a.topic}": "${a.answer}"`).join('\n')}
 
-Generate ONE question — the "Halfway Question" — that:
-- Finds the thread of longing that runs through BOTH people's answers
-- Names what both people are searching for but haven't found yet — belonging, home,
-  being fully known, something that lasts, something that can't be taken away
-- Gently opens the question of whether that longing points toward something —
-  or someone — beyond what either of them has already found
-- Is the kind of question that makes both people go quiet and lean forward
-- Does not mention Jesus, God, or religion by name — but should make someone
-  who knows the gospel immediately recognize the door it just opened
-- Feels like genuine human curiosity, not a script
-- Is warm, specific, and impossible to answer with a yes or no
-- Reads beautifully in italic serif — it should feel like a line from a novel
+Your job: find the ONE specific thing — a word, an image, a place, a person, a feeling — that appeared in BOTH of their answers, even if they used different words for it.
+
+Then generate ONE question that:
+- Names that specific shared thing directly — use their actual words or images, not abstractions
+- Asks whether that thing points toward something — or someone — they haven't found yet
+- Opens the question of whether there is a love, a home, a belonging, or a presence that could fully meet that longing — without naming God, Jesus, or religion directly
+- Feels like the most honest question in the room — the one both people are secretly already asking
+- Is short, specific, and impossible to answer with a yes or no
+- Does NOT start with "Both of you..." or "You both..." — find a more surprising entry into the question
+
+Examples of the right register:
+- "What if the hotpot and the Sunday morning are actually the same hunger?"
+- "Is there a version of home that doesn't require you to leave something behind to find it?"
+- "What would it mean to be known like that — not by a place or a person who could leave — but by something that couldn't?"
 
 Return only the question. No preamble, no explanation.
 `;
