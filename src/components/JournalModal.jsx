@@ -2,23 +2,33 @@ import React, { useState, useEffect, useMemo } from "react";
 import SouvenirDie from "./SouvenirDie";
 import { Camera, X, MapPin, Search, User } from "lucide-react";
 import { Country, City } from 'country-state-city';
-import { souvenirs } from "../data/souvenirData";
 import { compressImage } from "../utils/imageUtils";
 
 const MIN_ROLLS = 2;
 const MAX_ROLLS = 3;
+const SPIRITUAL_OPTIONS = [
+    "Buddhist",
+    "Muslim",
+    "Hindu",
+    "Christian",
+    "Confucian/Folk Religion",
+    "Secular/None",
+    "Other"
+];
 
 const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
     const [step, setStep] = useState(1);
     const [city, setCity] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [personName, setPersonName] = useState("");
+    const [spiritualBackground, setSpiritualBackground] = useState(null);
     const [rolls, setRolls] = useState([]); // [{ souvenir, answer }]
     const [currentAnswer, setCurrentAnswer] = useState("");
     const [pendingSouvenir, setPendingSouvenir] = useState(null);
-    const [photo, setPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [isRolling, setIsRolling] = useState(false);
+    const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false);
+    const [isQuestionVisible, setIsQuestionVisible] = useState(false);
 
     const countryCode = useMemo(() => {
         if (!countryName) return null;
@@ -43,7 +53,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
             .slice(0, 10);
     }, [cities, searchTerm]);
 
-    // Demo mode: pre-fill Seoul, auto-advance to roll step
+    // Demo mode: pre-fill Seoul, start at Name step
     useEffect(() => {
         if (isDemoMode && isOpen) {
             setCity("Seoul");
@@ -52,9 +62,9 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
         }
     }, [isDemoMode, isOpen]);
 
-    // Demo mode: auto-roll after arriving at step 3
+    // Demo mode: auto-roll after arriving at roll step
     useEffect(() => {
-        if (isDemoMode && step === 3 && rolls.length === 0) {
+        if (isDemoMode && step === 4 && rolls.length === 0) {
             setTimeout(() => setIsRolling(true), 800);
         }
     }, [isDemoMode, step, rolls.length]);
@@ -65,12 +75,14 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
             setCity("");
             setSearchTerm("");
             setPersonName("");
+            setSpiritualBackground(null);
             setRolls([]);
             setCurrentAnswer("");
             setPendingSouvenir(null);
             setPhotoPreview(null);
-            setPhoto(null);
             setIsRolling(false);
+            setIsGeneratingQuestion(false);
+            setIsQuestionVisible(false);
         }
     }, [isOpen]);
 
@@ -78,10 +90,52 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
 
     const usedIds = rolls.map(r => r.souvenir.id);
 
-    const handleRollComplete = (result) => {
+    const generateQuestion = async (souvenir, rollNumber) => {
+        const timeoutMs = 3000;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const response = await fetch("/api/generate-question", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    country: countryName,
+                    city,
+                    spiritualBackground: spiritualBackground || "Unknown",
+                    souvenirTopic: souvenir.id,
+                    rollNumber
+                })
+            });
+
+            if (!response.ok) throw new Error("generation_failed");
+
+            const data = await response.json();
+            const aiQuestion = typeof data?.question === "string" ? data.question.trim() : "";
+            return aiQuestion || null;
+        } catch (err) {
+            console.error("AI question generation failed, using fallback.", err);
+            return null;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    };
+
+    const handleRollComplete = async (result) => {
         setPendingSouvenir(result);
         setCurrentAnswer("");
         setIsRolling(false);
+        setIsGeneratingQuestion(true);
+        setIsQuestionVisible(false);
+
+        const rollNumber = rolls.length + 1;
+        const aiQuestion = await generateQuestion(result, rollNumber);
+        const resolvedQuestion = aiQuestion || result.question;
+
+        setPendingSouvenir({ ...result, question: resolvedQuestion });
+        setIsGeneratingQuestion(false);
+        setTimeout(() => setIsQuestionVisible(true), 30);
 
         // Demo mode: pre-fill answer
         if (isDemoMode) {
@@ -116,6 +170,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
             name: personName.trim() || null,
             country: countryName,
             city,
+            spiritualBackground: spiritualBackground || null,
             souvenirs: rolls.map(r => ({
                 id: r.souvenir.id,
                 title: r.souvenir.title,
@@ -149,7 +204,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
 
                 {/* Step indicators */}
                 <div className="flex gap-1 px-4 pt-3 shrink-0">
-                    {[1,2,3,4].map(s => (
+                    {[1,2,3,4,5].map(s => (
                         <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${step >= s ? 'bg-stone-800' : 'bg-stone-200'}`} />
                     ))}
                 </div>
@@ -231,8 +286,46 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                         </div>
                     )}
 
-                    {/* Step 3: Souvenir Rolls */}
+                    {/* Step 3: Spiritual Roots */}
                     {step === 3 && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-stone-800">Spiritual Roots 🌱</h3>
+                                <p className="text-stone-600 mt-1">What faith tradition shaped how you grew up?</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {SPIRITUAL_OPTIONS.map((option) => (
+                                    <button
+                                        key={option}
+                                        onClick={() => setSpiritualBackground(option)}
+                                        className={`text-left text-sm border rounded-lg p-3 transition-colors ${spiritualBackground === option
+                                            ? "border-stone-800 bg-stone-800 text-white"
+                                            : "border-stone-300 hover:bg-stone-50 text-stone-700"
+                                        }`}
+                                    >
+                                        {option}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { setSpiritualBackground(null); setStep(4); }}
+                                    className="flex-1 border border-stone-300 text-stone-600 py-3 rounded-lg font-medium hover:bg-stone-50 transition-colors"
+                                >
+                                    Skip
+                                </button>
+                                <button
+                                    onClick={() => setStep(4)}
+                                    className="flex-1 bg-stone-800 text-white py-3 rounded-lg font-bold hover:bg-stone-900 transition-colors"
+                                >
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 4: Souvenir Rolls */}
+                    {step === 4 && (
                         <div className="space-y-4 animate-in fade-in zoom-in-95">
                             {/* Progress */}
                             <div className="flex items-center justify-between">
@@ -261,26 +354,47 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                             {pendingSouvenir && (
                                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
                                     <div className={`p-4 rounded-xl border-2 ${pendingSouvenir.color}`}>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-2xl">{pendingSouvenir.icon}</span>
-                                            <span className="font-bold uppercase tracking-wider text-xs">{pendingSouvenir.title}</span>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-2xl">{pendingSouvenir.icon}</span>
+                                                <span className="font-bold uppercase tracking-wider text-xs">{pendingSouvenir.title}</span>
+                                            </div>
+                                            {isGeneratingQuestion && (
+                                                <span className="text-lg animate-bounce" aria-label="Generating question">🎲</span>
+                                            )}
                                         </div>
-                                        <p className="text-base font-medium text-stone-800">"{pendingSouvenir.question}"</p>
+                                        {isGeneratingQuestion ? (
+                                            <div className="space-y-2 animate-pulse">
+                                                <div className="h-3 bg-stone-200 rounded w-5/6" />
+                                                <div className="h-3 bg-stone-200 rounded w-4/6" />
+                                                <div className="h-3 bg-stone-200 rounded w-3/4" />
+                                            </div>
+                                        ) : (
+                                            <p
+                                                className={`text-base font-medium text-stone-800 transition-opacity duration-500 ${isQuestionVisible ? "opacity-100" : "opacity-0"}`}
+                                            >
+                                                "{pendingSouvenir.question}"
+                                            </p>
+                                        )}
                                     </div>
-                                    <textarea
-                                        value={currentAnswer}
-                                        onChange={(e) => setCurrentAnswer(e.target.value)}
-                                        placeholder="Type their answer here..."
-                                        className="w-full p-3 border border-stone-300 rounded-lg h-20 focus:ring-2 focus:ring-stone-500 outline-none resize-none"
-                                        autoFocus={!isDemoMode}
-                                    />
-                                    <button
-                                        disabled={!currentAnswer.trim()}
-                                        onClick={handleConfirmAnswer}
-                                        className="w-full bg-stone-700 text-white py-2 rounded-lg font-bold disabled:opacity-50 hover:bg-stone-800 transition-colors"
-                                    >
-                                        Save Answer
-                                    </button>
+                                    {!isGeneratingQuestion && (
+                                        <>
+                                            <textarea
+                                                value={currentAnswer}
+                                                onChange={(e) => setCurrentAnswer(e.target.value)}
+                                                placeholder="Type their answer here..."
+                                                className="w-full p-3 border border-stone-300 rounded-lg h-20 focus:ring-2 focus:ring-stone-500 outline-none resize-none"
+                                                autoFocus={!isDemoMode}
+                                            />
+                                            <button
+                                                disabled={!currentAnswer.trim()}
+                                                onClick={handleConfirmAnswer}
+                                                className="w-full bg-stone-700 text-white py-2 rounded-lg font-bold disabled:opacity-50 hover:bg-stone-800 transition-colors"
+                                            >
+                                                Save Answer
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
@@ -303,7 +417,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                                         <p className="text-xs text-stone-400 text-center flex-1 self-center">or roll one more time</p>
                                     )}
                                     <button
-                                        onClick={() => setStep(4)}
+                                        onClick={() => setStep(5)}
                                         className="flex-1 bg-yellow-400 text-stone-900 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors shadow"
                                     >
                                         Continue →
@@ -313,8 +427,8 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                         </div>
                     )}
 
-                    {/* Step 4: Photo + Save */}
-                    {step === 4 && (
+                    {/* Step 5: Photo + Save */}
+                    {step === 5 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                             <div>
                                 <label className="block text-sm font-medium text-stone-500 mb-1">Process Visa Photo</label>
