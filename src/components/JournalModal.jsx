@@ -133,7 +133,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
         const aiQuestion = await generateQuestion(result, rollNumber);
         const resolvedQuestion = aiQuestion || result.question;
 
-        setPendingSouvenir({ ...result, question: resolvedQuestion });
+        setPendingSouvenir({ ...result, question: resolvedQuestion, isAI: !!aiQuestion });
         setIsGeneratingQuestion(false);
         setTimeout(() => setIsQuestionVisible(true), 30);
 
@@ -359,9 +359,12 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                                                 <span className="text-2xl">{pendingSouvenir.icon}</span>
                                                 <span className="font-bold uppercase tracking-wider text-xs">{pendingSouvenir.title}</span>
                                             </div>
-                                            {isGeneratingQuestion && (
-                                                <span className="text-lg animate-bounce" aria-label="Generating question">🎲</span>
-                                            )}
+                                            {isGeneratingQuestion
+                                                ? <span className="text-[10px] font-bold text-stone-400 animate-pulse">✨ generating...</span>
+                                                : pendingSouvenir.isAI
+                                                    ? <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">✨ AI</span>
+                                                    : <span className="text-[10px] text-stone-300">fallback</span>
+                                            }
                                         </div>
                                         {isGeneratingQuestion ? (
                                             <div className="space-y-2 animate-pulse">
