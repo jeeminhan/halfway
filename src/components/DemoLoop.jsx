@@ -6,7 +6,7 @@ const DEMO_STEPS = [
   { type: 'topic', icon: '🍂', name: 'Loss', question: 'What have you left behind that still travels with you?' },
   { type: 'answer1', text: '"Hotpot with my mom — I haven\'t found anything like it here"' },
   { type: 'answer2', text: '"The feeling of walking into my home church on a Sunday morning"' },
-  { type: 'halfway', text: 'You both described belonging as something tied to a specific person or place. What would it mean to find something like that which couldn\'t be taken away?' },
+  { type: 'halfway', text: 'You\'ve both described a belonging you once had — or are still looking for. Is there something, or someone, who could give you that in a way that doesn\'t depend on where you are?' },
 ]
 
 const STEP_DURATIONS = [1800, 2400, 2800, 2800, 4500]

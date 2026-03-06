@@ -6,7 +6,7 @@ import HalfwayQuestion from './HalfwayQuestion'
 import CountryPicker from './CountryPicker'
 
 const TOPICS_PER_GAME = 3
-const FALLBACK_QUESTION = "What would it mean to find a kind of belonging that couldn't be taken away when you move?"
+const FALLBACK_QUESTION = "You've both described a belonging you once had — or are still looking for. Is there something, or someone, who could give you that in a way that doesn't depend on where you are?"
 
 export default function EncounterFlow({ onSave, onClose }) {
   const [step, setStep] = useState('who-you') // 'who-you' | 'who-them' | 'round' | 'generating' | 'halfway'

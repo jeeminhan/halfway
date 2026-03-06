@@ -24,12 +24,15 @@ ${person1Answers.map((a, i) => `Person 1 on "${a.topic}": "${a.answer}"`).join('
 ${person2Answers.map((a, i) => `Person 2 on "${a.topic}": "${a.answer}"`).join('\n')}
 
 Generate ONE question — the "Halfway Question" — that:
-- Finds the thread that runs through BOTH people's answers
-- Names something neither person said explicitly but both circled around
-- Lives in the shared space between their two stories
-- Feels like genuine philosophical curiosity aimed at both of them equally
-- Moves toward meaning, belonging, transcendence, or what lasts
-- Does not mention religion, God, or faith directly
+- Finds the thread of longing that runs through BOTH people's answers
+- Names what both people are searching for but haven't found yet — belonging, home,
+  being fully known, something that lasts, something that can't be taken away
+- Gently opens the question of whether that longing points toward something —
+  or someone — beyond what either of them has already found
+- Is the kind of question that makes both people go quiet and lean forward
+- Does not mention Jesus, God, or religion by name — but should make someone
+  who knows the gospel immediately recognize the door it just opened
+- Feels like genuine human curiosity, not a script
 - Is warm, specific, and impossible to answer with a yes or no
 - Reads beautifully in italic serif — it should feel like a line from a novel
 
