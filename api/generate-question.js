@@ -24,40 +24,40 @@ export default async function handler(req, res) {
     );
 
     const arcPrompt = `
-You are generating a single conversation question for an ISM (International Student Ministry)
-volunteer who is meeting a student from ${city}, ${country}.
+You are generating a single conversation question for a volunteer meeting an international student from ${city}, ${country}.
 
-Student spiritual background: ${spiritualBackground}
-Souvenir Die topic: ${souvenirTopic}
-Sam Chan arc phase: ${rollNumber === 1 ? "Resonate" : rollNumber === 2 ? "Dissonate" : "Complete"} (Roll ${rollNumber} of 3)
+Conversation topic: ${souvenirTopic}
+Conversation phase: ${rollNumber === 2 ? "Dissonate" : "Complete"} (question ${rollNumber} of 3)
 
 Generate ONE question. The question must:
-- Be culturally specific to ${city}, ${country} — reference actual local practices,
-  landmarks, traditions, or cultural concepts where possible
-- Follow the ${rollNumber === 1 ? "Resonate" : rollNumber === 2 ? "Dissonate" : "Complete"} phase of Sam Chan's Resonate/Dissonate/Complete arc
-- Have the coaching embedded in the phrasing — no separate explanation needed
-- Feel like genuine human curiosity, not a ministry script
-- Be appropriate for the student's ${spiritualBackground} background
+- Be culturally specific to ${city}, ${country} — reference actual local places, traditions, or cultural concepts
+- For Dissonate phase: gently surface a philosophical tension or longing within their culture —
+  something about meaning, belonging, identity, or what truly satisfies. Use their own cultural
+  framework to name something they may already quietly feel.
+- For Complete phase: open territory around deeper meaning — what would it look like if that
+  longing were fully met? What do they ultimately live for? Frame it as genuine curiosity, not a conclusion.
+- Feel like warm philosophical curiosity, not an interview or ministry script
 - Be a single question only — no multiple questions, no lists
 
 Return only the question text. No preamble, no explanation.
 `;
     const deepenPrompt = `
-You are a follow-up question generator for an ISM (International Student Ministry) volunteer.
+You are a thoughtful conversation partner helping someone go deeper with a student they just met.
 
-The volunteer just asked a student from ${city}, ${country} (spiritual background: ${spiritualBackground}) this question:
+The student from ${city}, ${country} just answered this question:
 "${originalQuestion}"
 
-The student answered:
+Their answer:
 "${studentAnswer}"
 
 Generate ONE follow-up question that:
-- Picks up on something emotionally specific the student said — a word, a detail, a feeling
-- Moves from the surface topic (food/music/place/etc.) toward something deeper: belonging, longing, home, identity, what satisfies, what they miss
-- Feels like genuine empathetic curiosity — the volunteer is truly listening
-- Does NOT mention Jesus, God, or religion directly — it opens a door naturally
-- Is warm, conversational, and flows naturally from their exact answer
+- Picks up on something emotionally specific they said — a word, a detail, a feeling
+- Moves from the surface topic toward something philosophical: belonging, longing, home, identity,
+  what they're searching for, what truly satisfies, what they miss
+- Feels like genuine curiosity — you are truly listening and interested in their inner world
+- Is warm, conversational, and flows naturally from their exact words
 - References something specific from their answer, not a generic follow-up
+- Does not mention religion, God, or faith directly — it opens a door through philosophy and feeling
 
 Return only the question text. No preamble, no explanation.
 `;

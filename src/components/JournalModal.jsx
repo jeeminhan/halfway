@@ -134,16 +134,25 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
         setPendingSouvenir(result);
         setCurrentAnswer("");
         setIsRolling(false);
-        setIsGeneratingQuestion(true);
         setIsQuestionVisible(false);
 
         const rollNumber = rolls.length + 1;
-        const aiQuestion = await generateQuestion(result, rollNumber);
-        const resolvedQuestion = aiQuestion || result.question;
 
-        setPendingSouvenir({ ...result, question: resolvedQuestion, isAI: !!aiQuestion });
-        setIsGeneratingQuestion(false);
-        setTimeout(() => setIsQuestionVisible(true), 30);
+        if (rollNumber === 1) {
+            // First roll: use the static souvenir question — a simple, natural opener.
+            // The Deepen button will use their answer to generate an AI follow-up.
+            setIsGeneratingQuestion(false);
+            setPendingSouvenir({ ...result, question: result.question, isAI: false });
+            setTimeout(() => setIsQuestionVisible(true), 30);
+        } else {
+            // Rolls 2–3: AI generates a philosophically probing question
+            setIsGeneratingQuestion(true);
+            const aiQuestion = await generateQuestion(result, rollNumber);
+            const resolvedQuestion = aiQuestion || result.question;
+            setPendingSouvenir({ ...result, question: resolvedQuestion, isAI: !!aiQuestion });
+            setIsGeneratingQuestion(false);
+            setTimeout(() => setIsQuestionVisible(true), 30);
+        }
 
         // Demo mode: pre-fill answer
         if (isDemoMode) {
@@ -452,7 +461,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                                                 ? <span className="text-[10px] font-bold text-stone-400 animate-pulse">✨ generating...</span>
                                                 : pendingSouvenir.isAI
                                                     ? <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">✨ AI</span>
-                                                    : <span className="text-[10px] text-stone-300">fallback</span>
+                                                    : null
                                             }
                                         </div>
                                         {isGeneratingQuestion ? (
