@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { drawTopics } from '../data/topics'
 import HalfwayQuestion from './HalfwayQuestion'
+import CountryPicker from './CountryPicker'
 
 const TOPICS_PER_GAME = 3
 const FALLBACK_QUESTION = "What would it mean to find a kind of belonging that couldn't be taken away when you move?"
 
 export default function EncounterFlow({ onSave, onClose }) {
-  const [step, setStep] = useState('who') // 'who' | 'round' | 'generating' | 'halfway'
+  const [step, setStep] = useState('who-you') // 'who-you' | 'who-them' | 'round' | 'generating' | 'halfway'
   const [person1, setPerson1] = useState({ city: '', country: '', name: '' })
   const [person2, setPerson2] = useState({ city: '', country: '', name: '' })
   const [topics] = useState(() => drawTopics(TOPICS_PER_GAME))
@@ -89,49 +90,29 @@ export default function EncounterFlow({ onSave, onClose }) {
       <div className="flex-1 px-6 pb-10 max-w-md mx-auto w-full overflow-y-auto">
         <AnimatePresence mode="wait">
 
-          {/* Who's here */}
-          {step === 'who' && (
-            <motion.div
-              key="who"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              className="space-y-6 pt-2"
-            >
-              <div>
-                <h2 className="font-serif text-2xl font-bold text-brown-deep">Who's here?</h2>
-                <p className="text-brown-deep/40 text-sm mt-1">Two people. Two places.</p>
-              </div>
+          {step === 'who-you' && (
+            <motion.div key="who-you" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-[calc(100vh-64px)] flex flex-col -mx-6">
+              <CountryPicker
+                label="You"
+                accentColor="terracotta"
+                onConfirm={(data) => {
+                  setPerson1(p => ({ ...p, country: data.country, city: data.city }))
+                  setStep('who-them')
+                }}
+              />
+            </motion.div>
+          )}
 
-              {[
-                { person: person1, setPerson: setPerson1, label: 'You', accent: 'terracotta' },
-                { person: person2, setPerson: setPerson2, label: 'Them', accent: 'sage' },
-              ].map(({ person, setPerson, label, accent }) => (
-                <div key={label} className="bg-paper-mid rounded-2xl p-5 border border-sand/30 space-y-4">
-                  <p className={`text-xs font-semibold uppercase tracking-widest text-${accent}`}>{label}</p>
-                  {[
-                    { key: 'name', placeholder: 'Name (optional)' },
-                    { key: 'city', placeholder: 'City *' },
-                    { key: 'country', placeholder: 'Country' },
-                  ].map(({ key, placeholder }) => (
-                    <input
-                      key={key}
-                      value={person[key]}
-                      onChange={e => setPerson(p => ({ ...p, [key]: e.target.value }))}
-                      placeholder={placeholder}
-                      className={`w-full bg-transparent border-b border-sand/40 pb-2 text-brown-deep placeholder:text-brown-deep/25 focus:outline-none focus:border-${accent} text-sm transition-colors`}
-                    />
-                  ))}
-                </div>
-              ))}
-
-              <button
-                disabled={!person1.city.trim() || !person2.city.trim()}
-                onClick={() => setStep('round')}
-                className="w-full bg-brown-deep text-parchment py-4 rounded-2xl font-semibold disabled:opacity-30 hover:bg-brown-deep/90 transition-colors"
-              >
-                Begin →
-              </button>
+          {step === 'who-them' && (
+            <motion.div key="who-them" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-[calc(100vh-64px)] flex flex-col -mx-6">
+              <CountryPicker
+                label="Them"
+                accentColor="sage"
+                onConfirm={(data) => {
+                  setPerson2(p => ({ ...p, country: data.country, city: data.city }))
+                  setStep('round')
+                }}
+              />
             </motion.div>
           )}
 

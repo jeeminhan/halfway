@@ -3,8 +3,10 @@ import DemoLoop from './components/DemoLoop'
 import EncounterFlow from './components/EncounterFlow'
 import ConversationHistory from './components/ConversationHistory'
 import AtlasView from './components/AtlasView'
+import OnboardingScreen from './components/OnboardingScreen'
 
 const STORAGE_KEY = 'halfway-conversations'
+const ONBOARDING_KEY = 'halfway-onboarded'
 
 function loadConversations() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [] }
@@ -15,8 +17,12 @@ function saveConversations(convos) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(convos))
 }
 
+function getInitialScreen() {
+  return localStorage.getItem(ONBOARDING_KEY) ? 'home' : 'onboarding'
+}
+
 export default function App() {
-  const [screen, setScreen] = useState('home')
+  const [screen, setScreen] = useState(getInitialScreen)
   const [conversations, setConversations] = useState(loadConversations)
 
   const handleSave = (convo) => {
@@ -28,6 +34,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-parchment">
+      {screen === 'onboarding' && (
+        <OnboardingScreen onDone={() => setScreen('home')} />
+      )}
       {screen === 'home' && (
         <DemoLoop
           hasHistory={conversations.length > 0}
