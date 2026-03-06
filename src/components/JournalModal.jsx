@@ -22,13 +22,16 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [personName, setPersonName] = useState("");
     const [spiritualBackground, setSpiritualBackground] = useState(null);
-    const [rolls, setRolls] = useState([]); // [{ souvenir, answer }]
+    const [rolls, setRolls] = useState([]); // [{ souvenir, answer, deepened }]
     const [currentAnswer, setCurrentAnswer] = useState("");
     const [pendingSouvenir, setPendingSouvenir] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [isRolling, setIsRolling] = useState(false);
     const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false);
     const [isQuestionVisible, setIsQuestionVisible] = useState(false);
+    const [deepeningIndex, setDeepeningIndex] = useState(null);
+    const [pendingDeepened, setPendingDeepened] = useState({});
+    const [pendingDeepenedAnswers, setPendingDeepenedAnswers] = useState({});
 
     const countryCode = useMemo(() => {
         if (!countryName) return null;
@@ -83,6 +86,9 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
             setIsRolling(false);
             setIsGeneratingQuestion(false);
             setIsQuestionVisible(false);
+            setDeepeningIndex(null);
+            setPendingDeepened({});
+            setPendingDeepenedAnswers({});
         }
     }, [isOpen]);
 
@@ -90,7 +96,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
 
     const usedIds = rolls.map(r => r.souvenir.id);
 
-    const generateQuestion = async (souvenir, rollNumber) => {
+    const requestQuestion = async (payload, logMessage) => {
         const timeoutMs = 3000;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -100,13 +106,7 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 signal: controller.signal,
-                body: JSON.stringify({
-                    country: countryName,
-                    city,
-                    spiritualBackground: spiritualBackground || "Unknown",
-                    souvenirTopic: souvenir.id,
-                    rollNumber
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) throw new Error("generation_failed");
@@ -115,12 +115,20 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
             const aiQuestion = typeof data?.question === "string" ? data.question.trim() : "";
             return aiQuestion || null;
         } catch (err) {
-            console.error("AI question generation failed, using fallback.", err);
+            console.error(logMessage, err);
             return null;
         } finally {
             clearTimeout(timeoutId);
         }
     };
+
+    const generateQuestion = async (souvenir, rollNumber) => requestQuestion({
+        country: countryName,
+        city,
+        spiritualBackground: spiritualBackground || "Unknown",
+        souvenirTopic: souvenir.id,
+        rollNumber
+    }, "AI question generation failed, using fallback.");
 
     const handleRollComplete = async (result) => {
         setPendingSouvenir(result);
@@ -147,10 +155,55 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
 
     const handleConfirmAnswer = () => {
         if (!currentAnswer.trim() || !pendingSouvenir) return;
-        const newRolls = [...rolls, { souvenir: pendingSouvenir, answer: currentAnswer }];
+        const newRolls = [...rolls, { souvenir: pendingSouvenir, answer: currentAnswer, deepened: null }];
         setRolls(newRolls);
         setPendingSouvenir(null);
         setCurrentAnswer("");
+    };
+
+    const handleDeepen = async (rollIndex) => {
+        if (deepeningIndex !== null) return;
+        const roll = rolls[rollIndex];
+        if (!roll) return;
+
+        setDeepeningIndex(rollIndex);
+        const aiQuestion = await requestQuestion({
+            mode: "deepen",
+            country: countryName,
+            city,
+            spiritualBackground: spiritualBackground || "Unknown",
+            originalQuestion: roll.souvenir.question,
+            studentAnswer: roll.answer
+        }, "AI deepen generation failed.");
+        setDeepeningIndex(null);
+
+        if (!aiQuestion) return;
+        setPendingDeepened(prev => ({ ...prev, [rollIndex]: aiQuestion }));
+        setPendingDeepenedAnswers(prev => ({ ...prev, [rollIndex]: "" }));
+    };
+
+    const handleDeepenedAnswerChange = (rollIndex, value) => {
+        setPendingDeepenedAnswers(prev => ({ ...prev, [rollIndex]: value }));
+    };
+
+    const handleSaveDeepened = (rollIndex) => {
+        const question = pendingDeepened[rollIndex];
+        const answer = (pendingDeepenedAnswers[rollIndex] || "").trim();
+        if (!question || !answer) return;
+
+        setRolls(prev => prev.map((roll, idx) => (
+            idx === rollIndex ? { ...roll, deepened: { question, answer } } : roll
+        )));
+        setPendingDeepened(prev => {
+            const next = { ...prev };
+            delete next[rollIndex];
+            return next;
+        });
+        setPendingDeepenedAnswers(prev => {
+            const next = { ...prev };
+            delete next[rollIndex];
+            return next;
+        });
     };
 
     const handlePhotoChange = async (e) => {
@@ -177,7 +230,8 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                 icon: r.souvenir.icon,
                 question: r.souvenir.question,
                 answer: r.answer,
-                color: r.souvenir.color
+                color: r.souvenir.color,
+                deepened: r.deepened || null
             })),
             photo: photoPreview,
             createdAt: new Date().toISOString(),
@@ -347,6 +401,41 @@ const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
                                         <span className="text-xs font-bold uppercase tracking-wider">{roll.souvenir.title}</span>
                                     </div>
                                     <p className="text-sm text-stone-700">"{roll.answer}"</p>
+                                    <div className="mt-3">
+                                        {roll.deepened ? (
+                                            <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 space-y-2">
+                                                <p className="text-xs font-semibold uppercase tracking-wider text-violet-700">Deepened</p>
+                                                <p className="text-sm font-medium text-violet-900">"{roll.deepened.question}"</p>
+                                                <p className="text-sm text-violet-800">"{roll.deepened.answer}"</p>
+                                            </div>
+                                        ) : pendingDeepened[i] ? (
+                                            <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 space-y-2">
+                                                <p className="text-sm font-medium text-violet-900">"{pendingDeepened[i]}"</p>
+                                                <textarea
+                                                    value={pendingDeepenedAnswers[i] || ""}
+                                                    onChange={(e) => handleDeepenedAnswerChange(i, e.target.value)}
+                                                    placeholder="Type their follow-up answer..."
+                                                    className="w-full p-2 border border-violet-200 bg-white rounded-lg h-20 focus:ring-2 focus:ring-violet-300 outline-none resize-none text-sm"
+                                                />
+                                                <button
+                                                    disabled={!(pendingDeepenedAnswers[i] || "").trim()}
+                                                    onClick={() => handleSaveDeepened(i)}
+                                                    className="bg-violet-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold disabled:opacity-50 hover:bg-violet-700 transition-colors"
+                                                >
+                                                    Save
+                                                </button>
+                                            </div>
+                                        ) : deepeningIndex === i ? (
+                                            <div className="h-9 w-32 rounded-md bg-violet-100 animate-pulse" />
+                                        ) : (
+                                            <button
+                                                onClick={() => handleDeepen(i)}
+                                                className="text-sm font-semibold text-violet-700 hover:text-violet-800 transition-colors"
+                                            >
+                                                ✨ Deepen →
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
 
