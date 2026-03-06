@@ -1,0 +1,123 @@
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+
+const DEMO_STEPS = [
+  { type: 'cities', content: 'Seoul · Toronto' },
+  { type: 'topic', icon: '🍂', name: 'Loss', question: 'What have you left behind that still travels with you?' },
+  { type: 'answer1', text: '"Hotpot with my mom — I haven\'t found anything like it here"' },
+  { type: 'answer2', text: '"The feeling of walking into my home church on a Sunday morning"' },
+  { type: 'halfway', text: 'You both described belonging as something tied to a specific person or place. What would it mean to find something like that which couldn\'t be taken away?' },
+]
+
+const STEP_DURATIONS = [1800, 2400, 2800, 2800, 4500]
+
+export default function DemoLoop({ hasHistory, onStart, onHistory, onAtlas }) {
+  const [step, setStep] = useState(0)
+
+  useEffect(() => {
+    const duration = STEP_DURATIONS[step] ?? 2000
+    const timer = setTimeout(() => {
+      const next = (step + 1) % DEMO_STEPS.length
+      setStep(next)
+    }, duration)
+    return () => clearTimeout(timer)
+  }, [step])
+
+  const current = DEMO_STEPS[step]
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-between px-6 py-16 max-w-md mx-auto">
+      {/* Demo area */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.5 }}
+            className="text-center w-full"
+          >
+            {current.type === 'cities' && (
+              <p className="font-serif text-2xl text-brown-deep/40 tracking-wide">
+                {current.content}
+              </p>
+            )}
+
+            {current.type === 'topic' && (
+              <div className="bg-paper-mid rounded-2xl p-6 shadow-sm border border-sand/30">
+                <p className="text-4xl mb-3">{current.icon}</p>
+                <p className="font-serif text-xl font-bold text-brown-deep mb-2">{current.name}</p>
+                <p className="font-serif italic text-brown-deep/60 text-base leading-relaxed">
+                  {current.question}
+                </p>
+              </div>
+            )}
+
+            {current.type === 'answer1' && (
+              <div className="rounded-xl p-4 bg-terracotta/8 border border-terracotta/20">
+                <p className="font-serif italic text-brown-deep/70 text-base leading-relaxed">
+                  {current.text}
+                </p>
+              </div>
+            )}
+
+            {current.type === 'answer2' && (
+              <div className="rounded-xl p-4 bg-sage/10 border border-sage/20">
+                <p className="font-serif italic text-brown-deep/70 text-base leading-relaxed">
+                  {current.text}
+                </p>
+              </div>
+            )}
+
+            {current.type === 'halfway' && (
+              <div className="space-y-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-sand">
+                  Halfway Question
+                </p>
+                <p className="font-serif italic text-brown-deep text-xl leading-relaxed">
+                  "{current.text}"
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Brand + CTA */}
+      <div className="w-full space-y-6 text-center">
+        <div>
+          <h1 className="font-serif text-5xl font-bold text-brown-deep">Halfway</h1>
+          <p className="text-brown-deep/40 mt-2 text-sm italic font-serif">
+            Where are you really from?
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <button
+            onClick={onStart}
+            className="w-full bg-brown-deep text-parchment py-4 rounded-2xl font-semibold text-base hover:bg-brown-deep/90 transition-colors"
+          >
+            Start a Conversation
+          </button>
+
+          {hasHistory && (
+            <button
+              onClick={onHistory}
+              className="w-full text-brown-deep/50 py-2 text-sm hover:text-brown-deep transition-colors font-serif italic"
+            >
+              Past Conversations
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={onAtlas}
+          className="text-brown-deep/25 text-xs hover:text-brown-deep/50 transition-colors"
+        >
+          🌍 Atlas
+        </button>
+      </div>
+    </div>
+  )
+}
