@@ -13,7 +13,7 @@ const majorCountries = [
     "Australia", "India"
 ];
 
-const WorldMap = ({ onCountryClick, countryStats = {} }) => {
+const WorldMap = ({ onCountryClick, onCountryRightClick, countryStats = {}, allCountryStats = {} }) => {
     const [content, setContent] = useState("");
 
     // Initial state: Center of world (0,0), scale depends on device
@@ -241,7 +241,7 @@ const WorldMap = ({ onCountryClick, countryStats = {} }) => {
                         geographies.map((geo) => {
                             const name = geo.properties.name;
                             const stats = countryStats[name];
-                            const regionCount = stats ? stats.regions.size : 0;
+                            const regionCount = typeof stats?.count === "number" ? stats.count : stats?.regions?.size || 0;
 
                             // Fill Color
                             let fillColor = colors.unvisited;
@@ -257,8 +257,19 @@ const WorldMap = ({ onCountryClick, countryStats = {} }) => {
                                 <React.Fragment key={geo.rsmKey}>
                                     <Geography
                                         geography={geo}
+                                        data-tooltip-id="my-tooltip"
                                         onClick={() => onCountryClick(name)}
-                                        onMouseEnter={() => setContent(`${name}${regionCount ? ` (${regionCount})` : ""} `)}
+                                        onContextMenu={(e) => { e.preventDefault(); if (onCountryRightClick) onCountryRightClick(name); }}
+                                        onMouseEnter={() => {
+                                            const stats = allCountryStats?.[name];
+                                            if (stats && stats.count > 0) {
+                                                const names = stats.people.slice(0, 2).map(p => p.name || 'Anonymous').join(', ');
+                                                const more = stats.count > 2 ? ` +${stats.count - 2} more` : '';
+                                                setContent(`${name} · ${stats.count} ${stats.count === 1 ? 'person' : 'people'}: ${names}${more}`);
+                                            } else {
+                                                setContent(name);
+                                            }
+                                        }}
                                         onMouseLeave={() => setContent("")}
                                         style={{
                                             default: {
@@ -341,5 +352,3 @@ const WorldMap = ({ onCountryClick, countryStats = {} }) => {
 };
 
 export default WorldMap;
-
-

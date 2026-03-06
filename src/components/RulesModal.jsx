@@ -1,7 +1,7 @@
 import React from "react";
 import { X, Map, Dices, PenTool, Camera } from "lucide-react";
 
-const RulesModal = ({ isOpen, onClose }) => {
+const RulesModal = ({ isOpen, onClose, onStartDemo }) => {
     if (!isOpen) return null;
 
     return (
@@ -68,12 +68,20 @@ const RulesModal = ({ isOpen, onClose }) => {
 
                 </div>
 
-                <button
-                    onClick={onClose}
-                    className="m-6 mt-0 bg-stone-800 text-white py-3 rounded-xl font-bold hover:bg-stone-900 transition-transform active:scale-95"
-                >
-                    Got it, let's explore!
-                </button>
+                <div className="m-6 mt-0 flex flex-col gap-2">
+                    <button
+                        onClick={onStartDemo}
+                        className="w-full bg-yellow-400 text-stone-900 py-3 rounded-xl font-bold hover:bg-yellow-500 transition-transform active:scale-95"
+                    >
+                        🎯 Try Demo Walk-through →
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="w-full bg-stone-800 text-white py-3 rounded-xl font-bold hover:bg-stone-900 transition-transform active:scale-95"
+                    >
+                        Got it, let's explore!
+                    </button>
+                </div>
             </div>
         </div>
     );

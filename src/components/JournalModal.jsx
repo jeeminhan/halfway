@@ -1,21 +1,27 @@
 import React, { useState, useEffect, useMemo } from "react";
 import SouvenirDie from "./SouvenirDie";
-import { Camera, X, MapPin, Search } from "lucide-react";
+import { Camera, X, MapPin, Search, User } from "lucide-react";
 import { Country, City } from 'country-state-city';
+import { souvenirs } from "../data/souvenirData";
+import { compressImage } from "../utils/imageUtils";
 
-const JournalModal = ({ isOpen, countryName, onClose, onSave }) => {
-    const [step, setStep] = useState(1); // 1: Region, 2: Roll, 3: Answer/Photo
-    const [region, setRegion] = useState("");
+const MIN_ROLLS = 2;
+const MAX_ROLLS = 3;
+
+const JournalModal = ({ isOpen, countryName, isDemoMode, onClose, onSave }) => {
+    const [step, setStep] = useState(1);
+    const [city, setCity] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
-    const [souvenir, setSouvenir] = useState(null);
-    const [answer, setAnswer] = useState("");
+    const [personName, setPersonName] = useState("");
+    const [rolls, setRolls] = useState([]); // [{ souvenir, answer }]
+    const [currentAnswer, setCurrentAnswer] = useState("");
+    const [pendingSouvenir, setPendingSouvenir] = useState(null);
     const [photo, setPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
+    const [isRolling, setIsRolling] = useState(false);
 
-    // Get Country Code for the current countryName
     const countryCode = useMemo(() => {
         if (!countryName) return null;
-        // Try exact match, then partial match
         const countries = Country.getAllCountries();
         const found = countries.find(c =>
             c.name.toLowerCase() === countryName.toLowerCase() ||
@@ -25,66 +31,114 @@ const JournalModal = ({ isOpen, countryName, onClose, onSave }) => {
         return found ? found.isoCode : null;
     }, [countryName]);
 
-    // Get Cities for that country
     const cities = useMemo(() => {
         if (!countryCode) return [];
         return City.getCitiesOfCountry(countryCode);
     }, [countryCode]);
 
-    // Filter cities based on search
     const filteredCities = useMemo(() => {
         if (!searchTerm.trim()) return [];
         return cities
             .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .slice(0, 10); // Limit to top 10 for performance
+            .slice(0, 10);
     }, [cities, searchTerm]);
+
+    // Demo mode: pre-fill Seoul, auto-advance to roll step
+    useEffect(() => {
+        if (isDemoMode && isOpen) {
+            setCity("Seoul");
+            setSearchTerm("Seoul");
+            setStep(2);
+        }
+    }, [isDemoMode, isOpen]);
+
+    // Demo mode: auto-roll after arriving at step 3
+    useEffect(() => {
+        if (isDemoMode && step === 3 && rolls.length === 0) {
+            setTimeout(() => setIsRolling(true), 800);
+        }
+    }, [isDemoMode, step, rolls.length]);
 
     useEffect(() => {
         if (!isOpen) {
             setStep(1);
-            setRegion("");
+            setCity("");
             setSearchTerm("");
-            setSouvenir(null);
-            setAnswer("");
+            setPersonName("");
+            setRolls([]);
+            setCurrentAnswer("");
+            setPendingSouvenir(null);
             setPhotoPreview(null);
+            setPhoto(null);
+            setIsRolling(false);
         }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
-    const handleRollComplete = (result) => {
-        setSouvenir(result);
-        setTimeout(() => setStep(3), 1500); // Wait a bit to show result
-    };
+    const usedIds = rolls.map(r => r.souvenir.id);
 
-    const handlePhotoChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setPhoto(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPhotoPreview(reader.result);
-            };
-            reader.readAsDataURL(file);
+    const handleRollComplete = (result) => {
+        setPendingSouvenir(result);
+        setCurrentAnswer("");
+        setIsRolling(false);
+
+        // Demo mode: pre-fill answer
+        if (isDemoMode) {
+            setTimeout(() => {
+                setCurrentAnswer("Tteokbokki from a pojangmacha stall on a rainy evening — it's spicy, warm, and tastes like home.");
+            }, 600);
         }
     };
 
-    const handleSave = () => {
-        onSave({
-            country: countryName,
-            region,
-            souvenir,
-            answer,
-            photo: photoPreview // Saving base64 for localstorage simplicity (limited size, but ok for prototype)
-        });
-        onClose();
+    const handleConfirmAnswer = () => {
+        if (!currentAnswer.trim() || !pendingSouvenir) return;
+        const newRolls = [...rolls, { souvenir: pendingSouvenir, answer: currentAnswer }];
+        setRolls(newRolls);
+        setPendingSouvenir(null);
+        setCurrentAnswer("");
     };
+
+    const handlePhotoChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const compressed = await compressImage(reader.result);
+            setPhotoPreview(compressed);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleSave = () => {
+        const newPerson = {
+            id: `person-${Date.now()}`,
+            name: personName.trim() || null,
+            country: countryName,
+            city,
+            souvenirs: rolls.map(r => ({
+                id: r.souvenir.id,
+                title: r.souvenir.title,
+                icon: r.souvenir.icon,
+                question: r.souvenir.question,
+                answer: r.answer,
+                color: r.souvenir.color
+            })),
+            photo: photoPreview,
+            createdAt: new Date().toISOString(),
+            isDemo: false
+        };
+        onSave(newPerson);
+    };
+
+    const canAddMoreRolls = rolls.length < MAX_ROLLS && !pendingSouvenir;
+    const canFinish = rolls.length >= MIN_ROLLS && !pendingSouvenir;
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
-                <div className="bg-stone-800 text-white p-4 flex justify-between items-center">
+                <div className="bg-stone-800 text-white p-4 flex justify-between items-center shrink-0">
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <span>✈️</span> Arriving in <span className="text-yellow-400">{countryName}</span>
                     </h2>
@@ -93,64 +147,51 @@ const JournalModal = ({ isOpen, countryName, onClose, onSave }) => {
                     </button>
                 </div>
 
-                {/* content */}
-                <div className="p-6 overflow-y-auto">
+                {/* Step indicators */}
+                <div className="flex gap-1 px-4 pt-3 shrink-0">
+                    {[1,2,3,4].map(s => (
+                        <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${step >= s ? 'bg-stone-800' : 'bg-stone-200'}`} />
+                    ))}
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1">
+                    {/* Step 1: City */}
                     {step === 1 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
                             <p className="text-stone-600">To unlock this country, let's get specific.</p>
                             <div className="relative">
                                 <label className="block text-sm font-medium text-stone-700 mb-1 flex items-center gap-1">
-                                    <MapPin size={14} /> Which City or Region is the student from?
+                                    <MapPin size={14} /> Which city or region is the student from?
                                 </label>
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        value={region || searchTerm}
-                                        onChange={(e) => {
-                                            setSearchTerm(e.target.value);
-                                            setRegion(""); // Clear selected region if typing
-                                        }}
+                                        value={city || searchTerm}
+                                        onChange={(e) => { setSearchTerm(e.target.value); setCity(""); }}
                                         placeholder="Search for a city (e.g. Rio de Janeiro)"
                                         className="w-full p-3 pl-10 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500 outline-none"
                                         autoFocus
                                     />
                                     <Search className="absolute left-3 top-3.5 text-stone-400" size={18} />
                                 </div>
-
-                                {filteredCities.length > 0 && !region && (
+                                {filteredCities.length > 0 && !city && (
                                     <div className="absolute z-10 w-full mt-1 bg-white border border-stone-200 rounded-lg shadow-xl overflow-hidden">
-                                        {filteredCities.map((city, idx) => (
+                                        {filteredCities.map((c, idx) => (
                                             <button
-                                                key={`${city.name}-${idx}`}
+                                                key={`${c.name}-${idx}`}
                                                 className="w-full text-left px-4 py-2 hover:bg-stone-50 text-stone-700 border-b border-stone-100 last:border-0"
-                                                onClick={() => {
-                                                    setRegion(city.name);
-                                                    setSearchTerm(city.name);
-                                                }}
+                                                onClick={() => { setCity(c.name); setSearchTerm(c.name); }}
                                             >
-                                                {city.name}
-                                                {city.stateCode && <span className="text-xs text-stone-400 ml-2">({city.stateCode})</span>}
+                                                {c.name}
+                                                {c.stateCode && <span className="text-xs text-stone-400 ml-2">({c.stateCode})</span>}
                                             </button>
                                         ))}
                                     </div>
                                 )}
                             </div>
-
-                            {region && (
-                                <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-sm text-stone-600 flex items-center justify-between">
-                                    <span>Selected: <strong>{region}</strong></span>
-                                    <button onClick={() => setRegion("")} className="text-stone-400 hover:text-stone-600">
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            )}
-
                             <button
-                                disabled={!region.trim() && !searchTerm.trim()}
-                                onClick={() => {
-                                    if (!region) setRegion(searchTerm); // Use custom input if no city selected
-                                    setStep(2);
-                                }}
+                                disabled={!city.trim() && !searchTerm.trim()}
+                                onClick={() => { if (!city) setCity(searchTerm); setStep(2); }}
                                 className="w-full bg-stone-800 text-white py-3 rounded-lg font-bold disabled:opacity-50 hover:bg-stone-900 transition-colors"
                             >
                                 Continue
@@ -158,74 +199,143 @@ const JournalModal = ({ isOpen, countryName, onClose, onSave }) => {
                         </div>
                     )}
 
+                    {/* Step 2: Name */}
                     {step === 2 && (
-                        <div className="text-center space-y-6 animate-in fade-in zoom-in-95">
-                            <p className="text-stone-600">
-                                Ask the student to roll the <span className="font-bold text-stone-800">Souvenir Die</span> to see what they share!
-                            </p>
-                            <SouvenirDie onRollComplete={handleRollComplete} />
-                            {souvenir && (
-                                <div className={`mt-4 p-4 rounded-lg ${souvenir.color} animate-bounce`}>
-                                    Rolled: <span className="font-bold">{souvenir.title}</span>
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                            <p className="text-stone-600">What's their name? <span className="text-stone-400 text-sm">(optional)</span></p>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={personName}
+                                    onChange={(e) => setPersonName(e.target.value)}
+                                    placeholder="e.g. Priya, Wei, Seo-yeon..."
+                                    className="w-full p-3 pl-10 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500 outline-none"
+                                    autoFocus
+                                />
+                                <User className="absolute left-3 top-3.5 text-stone-400" size={18} />
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setStep(3)}
+                                    className="flex-1 border border-stone-300 text-stone-600 py-3 rounded-lg font-medium hover:bg-stone-50 transition-colors"
+                                >
+                                    Skip
+                                </button>
+                                <button
+                                    onClick={() => setStep(3)}
+                                    className="flex-1 bg-stone-800 text-white py-3 rounded-lg font-bold hover:bg-stone-900 transition-colors"
+                                >
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3: Souvenir Rolls */}
+                    {step === 3 && (
+                        <div className="space-y-4 animate-in fade-in zoom-in-95">
+                            {/* Progress */}
+                            <div className="flex items-center justify-between">
+                                <p className="text-stone-600 text-sm">
+                                    {isDemoMode && rolls.length === 0
+                                        ? "Watch how the Souvenir Die works!"
+                                        : "Ask them to roll the Souvenir Die!"}
+                                </p>
+                                <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-full">
+                                    {rolls.length} / {MIN_ROLLS}–{MAX_ROLLS} rolls
+                                </span>
+                            </div>
+
+                            {/* Previous rolls */}
+                            {rolls.map((roll, i) => (
+                                <div key={i} className={`p-3 rounded-lg border ${roll.souvenir.color} bg-opacity-30`}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <span>{roll.souvenir.icon}</span>
+                                        <span className="text-xs font-bold uppercase tracking-wider">{roll.souvenir.title}</span>
+                                    </div>
+                                    <p className="text-sm text-stone-700">"{roll.answer}"</p>
+                                </div>
+                            ))}
+
+                            {/* Pending answer */}
+                            {pendingSouvenir && (
+                                <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                                    <div className={`p-4 rounded-xl border-2 ${pendingSouvenir.color}`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-2xl">{pendingSouvenir.icon}</span>
+                                            <span className="font-bold uppercase tracking-wider text-xs">{pendingSouvenir.title}</span>
+                                        </div>
+                                        <p className="text-base font-medium text-stone-800">"{pendingSouvenir.question}"</p>
+                                    </div>
+                                    <textarea
+                                        value={currentAnswer}
+                                        onChange={(e) => setCurrentAnswer(e.target.value)}
+                                        placeholder="Type their answer here..."
+                                        className="w-full p-3 border border-stone-300 rounded-lg h-20 focus:ring-2 focus:ring-stone-500 outline-none resize-none"
+                                        autoFocus={!isDemoMode}
+                                    />
+                                    <button
+                                        disabled={!currentAnswer.trim()}
+                                        onClick={handleConfirmAnswer}
+                                        className="w-full bg-stone-700 text-white py-2 rounded-lg font-bold disabled:opacity-50 hover:bg-stone-800 transition-colors"
+                                    >
+                                        Save Answer
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Die + roll controls */}
+                            {!pendingSouvenir && (
+                                <div className="text-center">
+                                    <SouvenirDie
+                                        usedIds={usedIds}
+                                        onRollComplete={handleRollComplete}
+                                        autoRoll={isRolling}
+                                        disabled={rolls.length >= MAX_ROLLS}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Finish button */}
+                            {canFinish && !pendingSouvenir && (
+                                <div className="flex gap-3">
+                                    {canAddMoreRolls && (
+                                        <p className="text-xs text-stone-400 text-center flex-1 self-center">or roll one more time</p>
+                                    )}
+                                    <button
+                                        onClick={() => setStep(4)}
+                                        className="flex-1 bg-yellow-400 text-stone-900 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors shadow"
+                                    >
+                                        Continue →
+                                    </button>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {step === 3 && souvenir && (
+                    {/* Step 4: Photo + Save */}
+                    {step === 4 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
-                            {/* Question Card */}
-                            <div className={`p-4 rounded-xl border-2 ${souvenir.color.replace('text-', 'border-').replace('bg-', 'bg-opacity-20 ')}`}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-2xl">{souvenir.icon}</span>
-                                    <span className="font-bold uppercase tracking-wider text-xs">{souvenir.title}</span>
-                                </div>
-                                <p className="text-lg font-medium text-stone-800">
-                                    "{souvenir.question}"
-                                </p>
-                            </div>
-
-                            {/* Answer Input */}
-                            <div>
-                                <label className="block text-sm font-medium text-stone-500 mb-1">Their Answer</label>
-                                <textarea
-                                    value={answer}
-                                    onChange={(e) => setAnswer(e.target.value)}
-                                    placeholder="Type their answer here..."
-                                    className="w-full p-3 border border-stone-300 rounded-lg h-24 focus:ring-2 focus:ring-stone-500 outline-none resize-none"
-                                />
-                            </div>
-
-                            {/* Photo Upload */}
                             <div>
                                 <label className="block text-sm font-medium text-stone-500 mb-1">Process Visa Photo</label>
-                                <div className="flex items-center gap-4">
-                                    <label className="flex-1 cursor-pointer bg-stone-100 hover:bg-stone-200 border-dashed border-2 border-stone-300 rounded-lg h-32 flex flex-col items-center justify-center text-stone-500 transition-colors">
-                                        {photoPreview ? (
-                                            <img src={photoPreview} alt="Preview" className="h-full w-full object-cover rounded-lg" />
-                                        ) : (
-                                            <>
-                                                <Camera size={24} className="mb-2" />
-                                                <span className="text-xs">Tap to Take Selfie</span>
-                                            </>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            capture="user"
-                                            onChange={handlePhotoChange}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                </div>
+                                <label className="cursor-pointer bg-stone-100 hover:bg-stone-200 border-dashed border-2 border-stone-300 rounded-lg h-36 flex flex-col items-center justify-center text-stone-500 transition-colors overflow-hidden">
+                                    {photoPreview ? (
+                                        <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                                    ) : (
+                                        <>
+                                            <Camera size={28} className="mb-2" />
+                                            <span className="text-sm font-medium">Tap to Take Selfie</span>
+                                            <span className="text-xs text-stone-400 mt-1">optional</span>
+                                        </>
+                                    )}
+                                    <input type="file" accept="image/*" capture="user" onChange={handlePhotoChange} className="hidden" />
+                                </label>
                             </div>
-
                             <button
-                                disabled={!answer.trim()}
                                 onClick={handleSave}
                                 className="w-full bg-yellow-400 text-stone-900 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors shadow-lg transform active:scale-95"
                             >
-                                STAMP PASSPORT & UNLOCK
+                                STAMP PASSPORT & UNLOCK 🌍
                             </button>
                         </div>
                     )}
