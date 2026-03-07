@@ -58,20 +58,8 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
     }
   }
 
-  const DEMO_HALFWAY_QUESTION = "What if the tteokbokki and the samosas are actually the same hunger — and neither of them is really what you're looking for?"
-
   const generateHalfwayQuestion = async (finalRounds) => {
     setStep('generating')
-
-    if (person1.isDemo && person2.isDemo) {
-      setTimeout(() => {
-        const q = DEMO_HALFWAY_QUESTION
-        setHalfwayQuestion(q)
-        onSave({ id: `convo-${Date.now()}`, person1, person2, rounds: finalRounds, halfwayQuestion: q, createdAt: new Date().toISOString() })
-        setStep('halfway')
-      }, 1800)
-      return
-    }
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 8000)
@@ -230,6 +218,12 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
               className="absolute inset-0 overflow-y-auto"
             >
             <div className="px-6 pb-10 max-w-md mx-auto w-full space-y-5 pt-2">
+              {/* Demo hint */}
+              {person1.isDemo && person2.isDemo && (
+                <p className="font-serif italic text-brown-deep/35 text-xs text-center">
+                  Edit these answers — the question at the end will change.
+                </p>
+              )}
               {/* Progress */}
               <div className="flex items-center justify-between">
                 <p className="text-xs text-brown-deep/35 uppercase tracking-widest font-semibold">
