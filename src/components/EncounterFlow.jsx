@@ -58,8 +58,20 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
     }
   }
 
+  const DEMO_HALFWAY_QUESTION = "What if the tteokbokki and the samosas are actually the same hunger — and neither of them is really what you're looking for?"
+
   const generateHalfwayQuestion = async (finalRounds) => {
     setStep('generating')
+
+    if (person1.isDemo && person2.isDemo) {
+      setTimeout(() => {
+        const q = DEMO_HALFWAY_QUESTION
+        setHalfwayQuestion(q)
+        onSave({ id: `convo-${Date.now()}`, person1, person2, rounds: finalRounds, halfwayQuestion: q, createdAt: new Date().toISOString() })
+        setStep('halfway')
+      }, 1800)
+      return
+    }
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 8000)
