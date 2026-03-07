@@ -42,7 +42,7 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
       .slice(0, 8)
   }, [citySearch, cities])
 
-  const accentHex = accentColor === 'sage' ? '#7A9E7E' : '#C4622D'
+  const accentHex = accentColor === 'sage' ? '#4A7A50' : '#C4622D'
 
   const handleCountrySelect = (name, isoCode) => {
     const iso = isoCode || allCountries.find(c => c.name === name)?.isoCode || ''
