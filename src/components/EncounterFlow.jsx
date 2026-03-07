@@ -143,7 +143,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 relative">
         {(step === 'who-you' || step === 'who-them') && (
           <AnimatePresence mode="wait">
             {step === 'who-you' && (
