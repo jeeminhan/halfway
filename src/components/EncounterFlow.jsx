@@ -136,7 +136,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
 
   return (
     <div className="h-screen bg-parchment flex flex-col">
-      <div className="flex justify-between items-center px-6 py-4 shrink-0">
+      <div className="flex justify-between items-center px-6 py-4 shrink-0 relative z-10">
         <button onClick={onClose} className="font-serif text-lg font-bold text-brown-deep hover:text-brown-deep/70 transition-colors">Halfway</button>
         <button onClick={onClose} className="p-2 rounded-full hover:bg-paper-mid transition-colors">
           <X size={18} className="text-brown-deep/50" />
@@ -220,9 +220,10 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
             <div className="px-6 pb-10 max-w-md mx-auto w-full space-y-5 pt-2">
               {/* Demo hint */}
               {person1.isDemo && person2.isDemo && (
-                <p className="font-serif italic text-brown-deep/35 text-xs text-center">
-                  Edit these answers — the question at the end will change.
-                </p>
+                <div className="bg-terracotta/10 border border-terracotta/25 rounded-xl px-4 py-3 text-center">
+                  <p className="text-terracotta text-sm font-semibold">This is a demo</p>
+                  <p className="text-brown-deep/60 text-xs mt-0.5">Edit these answers — the question at the end will change.</p>
+                </div>
               )}
               {/* Progress */}
               <div className="flex items-center justify-between">
