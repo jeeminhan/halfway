@@ -10,8 +10,7 @@ const FALLBACK_QUESTION = "What if the thing you're both homesick for isn't actu
 
 export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, onClose }) {
   const [step, setStep] = useState(
-    initialPerson1 && initialPerson2 ? 'loading-topics'
-    : initialPerson1 ? 'who-them'
+    initialPerson1 && !initialPerson2 ? 'who-them'
     : 'who-you'
   )
   const [person1, setPerson1] = useState(initialPerson1 || { city: '', country: '', name: '' })
@@ -33,13 +32,6 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
     setPerson2(DEMO_PERSON2)
     generateTopics(person1, DEMO_PERSON2, topics)
   }
-
-  // Kick off topic generation when both people are pre-set (full demo mode)
-  useEffect(() => {
-    if (initialPerson1?.isDemo && initialPerson2?.isDemo) {
-      generateTopics(initialPerson1, initialPerson2, topics)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-fill answers in demo mode
   useEffect(() => {
@@ -159,6 +151,8 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
                 <CountryPicker
                   label="You"
                   accentColor="terracotta"
+                  initialCountry={initialPerson1?.country}
+                  initialCity={initialPerson1?.city}
                   onConfirm={(data) => {
                     setPerson1(p => ({ ...p, country: data.country, city: data.city }))
                     setStep('who-them')
@@ -171,12 +165,14 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
                 <CountryPicker
                   label="Them"
                   accentColor="sage"
+                  initialCountry={initialPerson2?.country}
+                  initialCity={initialPerson2?.city}
                   onConfirm={(data) => {
-                    const p2 = { ...person2, country: data.country, city: data.city }
+                    const p2 = { ...person2, country: data.country, city: data.city, isDemo: person2.isDemo }
                     setPerson2(p2)
                     generateTopics(person1, p2, topics)
                   }}
-                  onSkip={handleDemoPerson}
+                  onSkip={initialPerson2 ? undefined : handleDemoPerson}
                 />
               </motion.div>
             )}

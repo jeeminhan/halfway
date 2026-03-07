@@ -1,19 +1,27 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search } from 'lucide-react'
 import { Country, City } from 'country-state-city'
 import WatercolorMap from './WatercolorMap'
 
-export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm, onSkip }) {
-  const [selectedCountry, setSelectedCountry] = useState('')
+export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm, onSkip, initialCountry, initialCity }) {
+  const [selectedCountry, setSelectedCountry] = useState(initialCountry || '')
   const [selectedIso, setSelectedIso] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [city, setCity] = useState('')
-  const [citySearch, setCitySearch] = useState('')
+  const [searchTerm, setSearchTerm] = useState(initialCountry || '')
+  const [city, setCity] = useState(initialCity || '')
+  const [citySearch, setCitySearch] = useState(initialCity || '')
   const [showDropdown, setShowDropdown] = useState(false)
   const [showCityDropdown, setShowCityDropdown] = useState(false)
 
   const allCountries = useMemo(() => Country.getAllCountries(), [])
+
+  // Resolve ISO for pre-filled country
+  useEffect(() => {
+    if (initialCountry && allCountries.length) {
+      const match = allCountries.find(c => c.name === initialCountry)
+      if (match) setSelectedIso(match.isoCode)
+    }
+  }, [allCountries]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cities = useMemo(() => {
     if (!selectedIso) return []
