@@ -4,7 +4,7 @@ import { Search } from 'lucide-react'
 import { Country, City } from 'country-state-city'
 import WatercolorMap from './WatercolorMap'
 
-export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm, onSkip, initialCountry, initialCity }) {
+export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm, onSkip, initialCountry, initialCity, locked }) {
   const [selectedCountry, setSelectedCountry] = useState(initialCountry || '')
   const [selectedIso, setSelectedIso] = useState('')
   const [searchTerm, setSearchTerm] = useState(initialCountry || '')
@@ -80,15 +80,17 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
           <Search size={14} className="absolute left-3 top-3 text-brown-deep/40" />
           <input
             value={searchTerm}
+            readOnly={locked}
             onChange={(e) => {
+              if (locked) return
               setSearchTerm(e.target.value)
               setShowDropdown(true)
               setSelectedCountry('')
               setSelectedIso('')
             }}
-            onFocus={() => setShowDropdown(true)}
+            onFocus={() => { if (!locked) setShowDropdown(true) }}
             placeholder="Search country..."
-            className="w-full bg-parchment/90 backdrop-blur-sm border border-sand/50 rounded-xl pl-8 pr-3 py-2.5 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none focus:border-terracotta text-sm shadow-sm"
+            className={`w-full bg-parchment/90 backdrop-blur-sm border border-sand/50 rounded-xl pl-8 pr-3 py-2.5 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none focus:border-terracotta text-sm shadow-sm ${locked ? 'opacity-70 cursor-default' : ''}`}
           />
           <AnimatePresence>
             {showDropdown && filtered.length > 0 && (
@@ -117,9 +119,10 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
         <div className="absolute inset-0">
           <WatercolorMap
             selectedCountry={selectedCountry}
-            onCountryClick={handleMapClick}
+            onCountryClick={locked ? undefined : handleMapClick}
           />
         </div>
+        {locked && <div className="absolute inset-0 z-[500]" />}
       </div>
 
       {onSkip && (
@@ -151,15 +154,17 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
               <Search size={13} className="absolute left-3 top-3 text-brown-deep/30" />
               <input
                 value={citySearch}
+                readOnly={locked}
                 onChange={e => {
+                  if (locked) return
                   setCitySearch(e.target.value)
                   setCity(e.target.value)
                   setShowCityDropdown(true)
                 }}
-                onFocus={() => setShowCityDropdown(true)}
+                onFocus={() => { if (!locked) setShowCityDropdown(true) }}
                 placeholder="Which city? (optional)"
-                className="w-full bg-paper-mid border border-sand/40 rounded-xl pl-8 pr-3 py-2.5 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none text-sm"
-                autoFocus
+                className={`w-full bg-paper-mid border border-sand/40 rounded-xl pl-8 pr-3 py-2.5 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none text-sm ${locked ? 'opacity-70 cursor-default' : ''}`}
+                autoFocus={!locked}
               />
               <AnimatePresence>
                 {showCityDropdown && filteredCities.length > 0 && (

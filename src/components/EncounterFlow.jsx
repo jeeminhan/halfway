@@ -153,6 +153,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
                   accentColor="terracotta"
                   initialCountry={initialPerson1?.country}
                   initialCity={initialPerson1?.city}
+                  locked={!!initialPerson1?.isDemo}
                   onConfirm={(data) => {
                     setPerson1(p => ({ ...p, country: data.country, city: data.city }))
                     setStep('who-them')
@@ -167,6 +168,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
                   accentColor="sage"
                   initialCountry={initialPerson2?.country}
                   initialCity={initialPerson2?.city}
+                  locked={!!initialPerson2?.isDemo}
                   onConfirm={(data) => {
                     const p2 = { ...person2, country: data.country, city: data.city, isDemo: person2.isDemo }
                     setPerson2(p2)
