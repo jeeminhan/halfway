@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { drawTopics } from '../data/topics'
@@ -22,6 +22,21 @@ export default function EncounterFlow({ initialPerson1, onSave, onClose }) {
 
   const currentTopic = (enrichedTopics || topics)[roundIndex]
   const isLastRound = roundIndex === TOPICS_PER_GAME - 1
+
+  const DEMO_PERSON2 = { country: 'Canada', city: 'Toronto', isDemo: true }
+
+  const handleDemoPerson = () => {
+    setPerson2(DEMO_PERSON2)
+    generateTopics(person1, DEMO_PERSON2, topics)
+  }
+
+  // Pre-fill person 2's answer when in demo mode
+  useEffect(() => {
+    if (person2.isDemo && step === 'round') {
+      // Find the demo answer from the original topics by id
+      setAnswer2(currentTopic.demoAnswer || '')
+    }
+  }, [roundIndex, person2.isDemo, step]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRoundSubmit = () => {
     if (!answer1.trim() || !answer2.trim()) return
@@ -151,6 +166,7 @@ export default function EncounterFlow({ initialPerson1, onSave, onClose }) {
                     setPerson2(p2)
                     generateTopics(person1, p2, topics)
                   }}
+                  onSkip={handleDemoPerson}
                 />
               </motion.div>
             )}
@@ -240,9 +256,14 @@ export default function EncounterFlow({ initialPerson1, onSave, onClose }) {
 
               {/* Answer 2 */}
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-sage">
-                  {person2.name || 'Them'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-sage">
+                    {person2.city || person2.country || 'Them'}
+                  </p>
+                  {person2.isDemo && (
+                    <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
+                  )}
+                </div>
                 <textarea
                   value={answer2}
                   onChange={e => setAnswer2(e.target.value)}

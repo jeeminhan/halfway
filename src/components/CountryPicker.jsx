@@ -4,7 +4,7 @@ import { Search } from 'lucide-react'
 import { Country, City } from 'country-state-city'
 import WatercolorMap from './WatercolorMap'
 
-export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm }) {
+export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm, onSkip }) {
   const [selectedCountry, setSelectedCountry] = useState('')
   const [selectedIso, setSelectedIso] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
@@ -113,6 +113,17 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
           />
         </div>
       </div>
+
+      {onSkip && (
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center z-[990] pointer-events-none">
+          <button
+            onClick={onSkip}
+            className="pointer-events-auto font-serif italic text-brown-deep/35 text-sm hover:text-brown-deep/60 transition-colors"
+          >
+            Try with an example person →
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {selectedCountry && (
