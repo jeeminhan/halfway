@@ -127,7 +127,7 @@ export default function WatercolorMap({ onCountryClick, selectedCountry, markers
       worldCopyJump
     >
       <TileLayer
-        url="https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg"
+        url={`https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg${import.meta.env.VITE_STADIA_MAPS_API_KEY ? `?api_key=${import.meta.env.VITE_STADIA_MAPS_API_KEY}` : ''}`}
         attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
       {geoData && (
