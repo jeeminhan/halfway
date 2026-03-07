@@ -23,6 +23,7 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('halfway-person1')) || null }
     catch { return null }
   })
+  const [person2, setPerson2] = useState(null)
 
   const handleSave = (convo) => {
     const updated = [convo, ...conversations]
@@ -41,7 +42,13 @@ export default function App() {
           savedPerson1={person1}
           onStart={(p1) => {
             setPerson1(p1)
+            setPerson2(null)
             localStorage.setItem('halfway-person1', JSON.stringify(p1))
+            setScreen('encounter')
+          }}
+          onDemo={() => {
+            setPerson1({ country: 'South Korea', city: 'Seoul', isDemo: true })
+            setPerson2({ country: 'Canada', city: 'Toronto', isDemo: true })
             setScreen('encounter')
           }}
           onHistory={() => setScreen('history')}
@@ -50,6 +57,7 @@ export default function App() {
       {screen === 'encounter' && (
         <EncounterFlow
           initialPerson1={person1}
+          initialPerson2={person2}
           onSave={handleSave}
           onClose={() => setScreen('home')}
         />

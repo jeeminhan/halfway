@@ -8,10 +8,14 @@ import CountryPicker from './CountryPicker'
 const TOPICS_PER_GAME = 3
 const FALLBACK_QUESTION = "What if the thing you're both homesick for isn't actually a place?"
 
-export default function EncounterFlow({ initialPerson1, onSave, onClose }) {
-  const [step, setStep] = useState(initialPerson1 ? 'who-them' : 'who-you')
+export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, onClose }) {
+  const [step, setStep] = useState(
+    initialPerson1 && initialPerson2 ? 'loading-topics'
+    : initialPerson1 ? 'who-them'
+    : 'who-you'
+  )
   const [person1, setPerson1] = useState(initialPerson1 || { city: '', country: '', name: '' })
-  const [person2, setPerson2] = useState({ city: '', country: '', name: '' })
+  const [person2, setPerson2] = useState(initialPerson2 || { city: '', country: '', name: '' })
   const [topics] = useState(() => drawTopics(TOPICS_PER_GAME))
   const [enrichedTopics, setEnrichedTopics] = useState(null)
   const [roundIndex, setRoundIndex] = useState(0)
@@ -30,13 +34,19 @@ export default function EncounterFlow({ initialPerson1, onSave, onClose }) {
     generateTopics(person1, DEMO_PERSON2, topics)
   }
 
-  // Pre-fill person 2's answer when in demo mode
+  // Kick off topic generation when both people are pre-set (full demo mode)
   useEffect(() => {
-    if (person2.isDemo && step === 'round') {
-      // Find the demo answer from the original topics by id
-      setAnswer2(currentTopic.demoAnswer || '')
+    if (initialPerson1?.isDemo && initialPerson2?.isDemo) {
+      generateTopics(initialPerson1, initialPerson2, topics)
     }
-  }, [roundIndex, person2.isDemo, step]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-fill answers in demo mode
+  useEffect(() => {
+    if (step !== 'round') return
+    if (person1.isDemo) setAnswer1(currentTopic.demoAnswer1 || '')
+    if (person2.isDemo) setAnswer2(currentTopic.demoAnswer2 || '')
+  }, [roundIndex, step]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRoundSubmit = () => {
     if (!answer1.trim() || !answer2.trim()) return
@@ -242,9 +252,14 @@ export default function EncounterFlow({ initialPerson1, onSave, onClose }) {
 
               {/* Answer 1 */}
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                  {person1.name || 'You'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-terracotta">
+                    {person1.city || person1.country || 'You'}
+                  </p>
+                  {person1.isDemo && (
+                    <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
+                  )}
+                </div>
                 <textarea
                   value={answer1}
                   onChange={e => setAnswer1(e.target.value)}

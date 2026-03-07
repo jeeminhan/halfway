@@ -19,7 +19,7 @@ const STEP_BLOOMS = [
   'radial-gradient(ellipse 80% 60% at 50% 45%, rgba(212, 169, 106, 0.12) 0%, transparent 72%)',
 ]
 
-export default function DemoLoop({ hasHistory, onStart, onHistory, savedPerson1 }) {
+export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, savedPerson1 }) {
   const [step, setStep] = useState(0)
   const [countrySearch, setCountrySearch] = useState(savedPerson1?.country || '')
   const [selectedCountry, setSelectedCountry] = useState(savedPerson1?.country || '')
@@ -258,6 +258,13 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, savedPerson1 
             className="w-full bg-brown-deep text-parchment py-4 rounded-2xl font-semibold text-base hover:bg-brown-deep/90 transition-colors disabled:opacity-35"
           >
             Start a Conversation
+          </button>
+
+          <button
+            onClick={onDemo}
+            className="w-full border border-sand/50 text-brown-deep/60 py-3 rounded-2xl font-serif italic text-sm hover:border-terracotta/40 hover:text-brown-deep transition-colors"
+          >
+            Try a demo
           </button>
 
           {hasHistory && (
