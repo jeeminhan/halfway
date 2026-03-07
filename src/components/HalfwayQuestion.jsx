@@ -59,7 +59,7 @@ export default function HalfwayQuestion({ question, person1, person2, onSave }) 
           onClick={onSave}
           className="font-serif italic text-brown-deep/40 text-sm hover:text-brown-deep/70 transition-colors"
         >
-          Save this conversation →
+          Done →
         </motion.button>
       </div>
     </motion.div>

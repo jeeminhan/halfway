@@ -1,16 +1,24 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search } from 'lucide-react'
-import { Country } from 'country-state-city'
+import { Country, City } from 'country-state-city'
 import WatercolorMap from './WatercolorMap'
 
 export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm }) {
   const [selectedCountry, setSelectedCountry] = useState('')
+  const [selectedIso, setSelectedIso] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [city, setCity] = useState('')
+  const [citySearch, setCitySearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
 
   const allCountries = useMemo(() => Country.getAllCountries(), [])
+
+  const cities = useMemo(() => {
+    if (!selectedIso) return []
+    return City.getCitiesOfCountry(selectedIso) || []
+  }, [selectedIso])
 
   const filtered = useMemo(() => {
     if (!searchTerm.trim()) return []
@@ -19,17 +27,37 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
       .slice(0, 6)
   }, [searchTerm, allCountries])
 
+  const filteredCities = useMemo(() => {
+    if (!citySearch.trim()) return cities.slice(0, 8)
+    return cities
+      .filter(c => c.name.toLowerCase().includes(citySearch.toLowerCase()))
+      .slice(0, 8)
+  }, [citySearch, cities])
+
   const accentHex = accentColor === 'sage' ? '#7A9E7E' : '#C4622D'
 
-  const handleCountrySelect = (name) => {
+  const handleCountrySelect = (name, isoCode) => {
+    const iso = isoCode || allCountries.find(c => c.name === name)?.isoCode || ''
     setSelectedCountry(name)
+    setSelectedIso(iso)
     setSearchTerm(name)
     setShowDropdown(false)
     setCity('')
+    setCitySearch('')
+  }
+
+  const handleMapClick = (name) => {
+    // Map names may differ slightly — try exact then partial match
+    const exact = allCountries.find(c => c.name === name)
+    const match = exact || allCountries.find(c =>
+      c.name.toLowerCase().includes(name.toLowerCase()) ||
+      name.toLowerCase().includes(c.name.toLowerCase())
+    )
+    handleCountrySelect(name, match?.isoCode || '')
   }
 
   return (
-    <div className="relative flex flex-col h-full">
+    <div className="relative flex flex-col flex-1 min-h-0">
       <div className="absolute top-4 left-4 z-[1000]">
         <span
           className="text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full bg-parchment/90 backdrop-blur-sm"
@@ -48,6 +76,7 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
               setSearchTerm(e.target.value)
               setShowDropdown(true)
               setSelectedCountry('')
+              setSelectedIso('')
             }}
             onFocus={() => setShowDropdown(true)}
             placeholder="Search country..."
@@ -64,7 +93,7 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
                 {filtered.map(c => (
                   <button
                     key={c.isoCode}
-                    onClick={() => handleCountrySelect(c.name)}
+                    onClick={() => handleCountrySelect(c.name, c.isoCode)}
                     className="w-full text-left px-4 py-2.5 text-sm text-brown-deep hover:bg-paper-mid transition-colors border-b border-sand/20 last:border-0"
                   >
                     {c.flag} {c.name}
@@ -76,11 +105,13 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
         </div>
       </div>
 
-      <div className="flex-1 min-h-0">
-        <WatercolorMap
-          selectedCountry={selectedCountry}
-          onCountryClick={handleCountrySelect}
-        />
+      <div className="flex-1 min-h-0 relative">
+        <div className="absolute inset-0">
+          <WatercolorMap
+            selectedCountry={selectedCountry}
+            onCountryClick={handleMapClick}
+          />
+        </div>
       </div>
 
       <AnimatePresence>
@@ -96,13 +127,47 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
               <span className="text-base">📍</span>
               <span className="font-serif font-bold text-brown-deep text-lg">{selectedCountry}</span>
             </div>
-            <input
-              value={city}
-              onChange={e => setCity(e.target.value)}
-              placeholder="Which city? (optional)"
-              className="w-full bg-paper-mid border border-sand/40 rounded-xl px-4 py-2.5 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none text-sm"
-              autoFocus
-            />
+
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-3 text-brown-deep/30" />
+              <input
+                value={citySearch}
+                onChange={e => {
+                  setCitySearch(e.target.value)
+                  setCity(e.target.value)
+                  setShowCityDropdown(true)
+                }}
+                onFocus={() => setShowCityDropdown(true)}
+                placeholder="Which city? (optional)"
+                className="w-full bg-paper-mid border border-sand/40 rounded-xl pl-8 pr-3 py-2.5 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none text-sm"
+                autoFocus
+              />
+              <AnimatePresence>
+                {showCityDropdown && filteredCities.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="absolute bottom-full mb-1 left-0 right-0 bg-parchment/95 backdrop-blur-sm border border-sand/40 rounded-xl shadow-lg overflow-hidden z-[1001] max-h-48 overflow-y-auto"
+                  >
+                    {filteredCities.map(c => (
+                      <button
+                        key={`${c.name}-${c.stateCode}`}
+                        onClick={() => {
+                          setCity(c.name)
+                          setCitySearch(c.name)
+                          setShowCityDropdown(false)
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-brown-deep hover:bg-paper-mid transition-colors border-b border-sand/20 last:border-0"
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <button
               onClick={() => onConfirm({ country: selectedCountry, city: city.trim() })}
               className="w-full text-parchment py-3 rounded-2xl font-semibold transition-colors text-sm"

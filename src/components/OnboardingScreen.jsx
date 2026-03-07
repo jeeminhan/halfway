@@ -26,7 +26,6 @@ export default function OnboardingScreen({ onDone }) {
 
   const handleNext = () => {
     if (isLast) {
-      localStorage.setItem('halfway-onboarded', 'true')
       onDone()
     } else {
       setSlide(s => s + 1)
@@ -90,10 +89,7 @@ export default function OnboardingScreen({ onDone }) {
 
         {!isLast && (
           <button
-            onClick={() => {
-              localStorage.setItem('halfway-onboarded', 'true')
-              onDone()
-            }}
+            onClick={onDone}
             className="w-full text-brown-deep/30 text-sm hover:text-brown-deep/50 transition-colors"
           >
             Skip intro

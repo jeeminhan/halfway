@@ -6,7 +6,6 @@ import AtlasView from './components/AtlasView'
 import OnboardingScreen from './components/OnboardingScreen'
 
 const STORAGE_KEY = 'halfway-conversations'
-const ONBOARDING_KEY = 'halfway-onboarded'
 
 function loadConversations() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [] }
@@ -17,19 +16,18 @@ function saveConversations(convos) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(convos))
 }
 
-function getInitialScreen() {
-  return localStorage.getItem(ONBOARDING_KEY) ? 'home' : 'onboarding'
-}
-
 export default function App() {
-  const [screen, setScreen] = useState(getInitialScreen)
+  const [screen, setScreen] = useState('onboarding')
   const [conversations, setConversations] = useState(loadConversations)
+  const [person1, setPerson1] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('halfway-person1')) || null }
+    catch { return null }
+  })
 
   const handleSave = (convo) => {
     const updated = [convo, ...conversations]
     setConversations(updated)
     saveConversations(updated)
-    setScreen('home')
   }
 
   return (
@@ -40,13 +38,18 @@ export default function App() {
       {screen === 'home' && (
         <DemoLoop
           hasHistory={conversations.length > 0}
-          onStart={() => setScreen('encounter')}
+          savedPerson1={person1}
+          onStart={(p1) => {
+            setPerson1(p1)
+            localStorage.setItem('halfway-person1', JSON.stringify(p1))
+            setScreen('encounter')
+          }}
           onHistory={() => setScreen('history')}
-          onAtlas={() => setScreen('atlas')}
         />
       )}
       {screen === 'encounter' && (
         <EncounterFlow
+          initialPerson1={person1}
           onSave={handleSave}
           onClose={() => setScreen('home')}
         />
