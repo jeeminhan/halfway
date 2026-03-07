@@ -149,7 +149,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
   return (
     <div className="h-screen bg-parchment flex flex-col">
       <div className="flex justify-between items-center px-6 py-4 shrink-0">
-        <h1 className="font-serif text-lg font-bold text-brown-deep">Halfway</h1>
+        <button onClick={onClose} className="font-serif text-lg font-bold text-brown-deep hover:text-brown-deep/70 transition-colors">Halfway</button>
         <button onClick={onClose} className="p-2 rounded-full hover:bg-paper-mid transition-colors">
           <X size={18} className="text-brown-deep/50" />
         </button>
