@@ -155,11 +155,20 @@ export default function EncounterFlow({ onSave, onClose }) {
               key="loading-topics"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center min-h-[70vh] space-y-5"
+              className="flex flex-col items-center justify-center min-h-[70vh] space-y-6"
             >
-              <div className="w-7 h-7 rounded-full border-2 border-terracotta border-t-transparent animate-spin" />
-              <p className="font-serif italic text-brown-deep/40 text-center text-sm">
-                Reading your worlds...
+              <div className="flex gap-2">
+                {[0, 1, 2].map(i => (
+                  <motion.div
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-terracotta/50"
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
+                  />
+                ))}
+              </div>
+              <p className="font-serif italic text-brown-deep/40 text-sm">
+                {step === 'loading-topics' ? 'Reading your worlds...' : 'Finding the halfway point...'}
               </p>
             </motion.div>
           )}
@@ -190,8 +199,11 @@ export default function EncounterFlow({ onSave, onClose }) {
 
               {/* Topic */}
               <div
-                className="rounded-2xl p-6 border text-center"
-                style={{ backgroundColor: currentTopic.color + '12', borderColor: currentTopic.color + '30' }}
+                className="ink-card p-6 text-center border"
+                style={{
+                  background: `linear-gradient(135deg, ${currentTopic.color}14 0%, #EDE5D0 65%)`,
+                  borderColor: currentTopic.color + '30',
+                }}
               >
                 <p className="text-4xl mb-2">{currentTopic.icon}</p>
                 <p className="font-serif text-xl font-bold text-brown-deep mb-1">{currentTopic.name}</p>
@@ -244,11 +256,20 @@ export default function EncounterFlow({ onSave, onClose }) {
               key="generating"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center min-h-[70vh] space-y-5"
+              className="flex flex-col items-center justify-center min-h-[70vh] space-y-6"
             >
-              <div className="w-7 h-7 rounded-full border-2 border-terracotta border-t-transparent animate-spin" />
-              <p className="font-serif italic text-brown-deep/40 text-center text-sm">
-                Finding the halfway point...
+              <div className="flex gap-2">
+                {[0, 1, 2].map(i => (
+                  <motion.div
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-terracotta/50"
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
+                  />
+                ))}
+              </div>
+              <p className="font-serif italic text-brown-deep/40 text-sm">
+                {step === 'loading-topics' ? 'Reading your worlds...' : 'Finding the halfway point...'}
               </p>
             </motion.div>
           )}

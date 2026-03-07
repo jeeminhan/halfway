@@ -47,22 +47,24 @@ export default function OnboardingScreen({ onDone }) {
             transition={{ duration: 0.4 }}
             className="text-center space-y-5 w-full"
           >
-            <p className="text-6xl">{current.icon}</p>
-            <h2 className="font-serif text-2xl font-bold text-brown-deep leading-tight">
-              {current.heading}
-            </h2>
-            <p className="text-brown-deep/60 text-base leading-relaxed max-w-xs mx-auto">
-              {current.body}
-            </p>
-            {current.topics && (
-              <div className="flex gap-2 justify-center flex-wrap pt-2">
-                {current.topics.map(t => (
-                  <span key={t} className="text-sm bg-paper-mid border border-sand/40 text-brown-deep/70 px-3 py-1.5 rounded-full font-serif italic">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="ink-card wash-sand p-8 text-center space-y-5 w-full border border-sand/30">
+              <p className="text-6xl">{current.icon}</p>
+              <h2 className="font-serif text-2xl font-bold text-brown-deep leading-tight">
+                {current.heading}
+              </h2>
+              <p className="text-brown-deep/60 text-base leading-relaxed max-w-xs mx-auto">
+                {current.body}
+              </p>
+              {current.topics && (
+                <div className="flex gap-2 justify-center flex-wrap pt-2">
+                  {current.topics.map(t => (
+                    <span key={t} className="text-sm bg-paper-mid border border-sand/40 text-brown-deep/70 px-3 py-1.5 rounded-full font-serif italic">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>

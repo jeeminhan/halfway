@@ -2,55 +2,66 @@ import React from 'react'
 import { motion } from 'framer-motion'
 
 export default function HalfwayQuestion({ question, person1, person2, onSave }) {
-  const cities = [person1?.city, person2?.city].filter(Boolean).join(' · ')
+  const cities = [person1?.city || person1?.country, person2?.city || person2?.country]
+    .filter(Boolean).join(' · ')
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 1 }}
-      className="flex flex-col items-center justify-center min-h-[80vh] space-y-12 pt-4 text-center"
+      transition={{ duration: 1.2 }}
+      className="relative flex flex-col items-center justify-center min-h-[85vh] text-center px-2"
     >
-      {cities && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="font-serif text-brown-deep/30 text-sm tracking-wide"
-        >
-          {cities}
-        </motion.p>
-      )}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 70% 50% at 50% 45%, rgba(196, 98, 45, 0.08) 0%, transparent 70%)',
+        }}
+      />
 
-      <div className="space-y-5 max-w-xs">
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-          className="text-xs font-semibold uppercase tracking-widest text-sand"
-        >
-          Halfway Question
-        </motion.p>
+      <div className="relative space-y-10 max-w-xs">
+        {cities && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="font-serif text-brown-deep/30 text-sm tracking-widest uppercase"
+          >
+            {cities}
+          </motion.p>
+        )}
 
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1, duration: 0.9 }}
-          className="font-serif italic text-2xl text-brown-deep leading-relaxed"
+          transition={{ delay: 0.9, duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+          className="space-y-3"
         >
-          "{question}"
-        </motion.p>
-      </div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-sand">
+            ✦ Halfway Question
+          </p>
+          <p className="font-serif italic text-[1.55rem] text-brown-deep leading-snug">
+            "{question}"
+          </p>
+        </motion.div>
 
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 3 }}
-        onClick={onSave}
-        className="text-brown-deep/35 text-sm hover:text-brown-deep/70 transition-colors font-serif italic"
-      >
-        Save this conversation →
-      </motion.button>
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ delay: 2.2, duration: 0.8 }}
+          className="w-12 h-px bg-terracotta/30 mx-auto"
+        />
+
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2.8 }}
+          onClick={onSave}
+          className="font-serif italic text-brown-deep/40 text-sm hover:text-brown-deep/70 transition-colors"
+        >
+          Save this conversation →
+        </motion.button>
+      </div>
     </motion.div>
   )
 }

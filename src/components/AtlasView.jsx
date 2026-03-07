@@ -1,20 +1,8 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { ArrowLeft } from 'lucide-react'
-import WorldMap from './WorldMap'
+import WatercolorMap from './WatercolorMap'
 
 export default function AtlasView({ conversations, onBack }) {
-  const countryStats = useMemo(() => {
-    const stats = {}
-    conversations.forEach(convo => {
-      const country = convo.person2?.country
-      if (!country) return
-      if (!stats[country]) stats[country] = { count: 0, people: [] }
-      stats[country].count += 1
-      stats[country].people.push({ name: convo.person2?.name || 'Someone' })
-    })
-    return stats
-  }, [conversations])
-
   return (
     <div className="min-h-screen bg-parchment flex flex-col">
       <div className="px-6 py-4 flex items-center gap-3 shrink-0">
@@ -23,11 +11,11 @@ export default function AtlasView({ conversations, onBack }) {
         </button>
         <h1 className="font-serif text-xl font-bold text-brown-deep">Atlas</h1>
       </div>
-      <div className="flex-1">
-        <WorldMap
-          countryStats={countryStats}
-          allCountryStats={countryStats}
+      <div className="flex-1 min-h-0">
+        <WatercolorMap
+          selectedCountry={null}
           onCountryClick={() => {}}
+          markers={conversations.map(c => ({ country: c.person2?.country, name: c.person2?.name }))}
         />
       </div>
     </div>
