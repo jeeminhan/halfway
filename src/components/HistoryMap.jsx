@@ -1,0 +1,88 @@
+// src/components/HistoryMap.jsx
+import React, { useState, useEffect } from 'react'
+import { MapContainer, TileLayer, CircleMarker, Polyline, Popup, useMap } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import { getLatLng, midpoint } from '../utils/geo'
+
+function FitBounds({ points }) {
+  const map = useMap()
+  useEffect(() => {
+    if (points.length === 0) return
+    if (points.length === 1) {
+      map.setView([points[0].lat, points[0].lng], 4)
+    } else {
+      const lats = points.map(p => p.lat)
+      const lngs = points.map(p => p.lng)
+      map.fitBounds([
+        [Math.min(...lats) - 5, Math.min(...lngs) - 5],
+        [Math.max(...lats) + 5, Math.max(...lngs) + 5],
+      ], { padding: [20, 20] })
+    }
+  }, [points.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
+export default function HistoryMap({ conversations }) {
+  const [activeQuestion, setActiveQuestion] = useState(null)
+
+  const pins = conversations.map(convo => {
+    const ll1 = getLatLng(convo.person1?.country, convo.person1?.city)
+    const ll2 = getLatLng(convo.person2?.country, convo.person2?.city)
+    if (!ll1 || !ll2) return null
+    return { convo, ll1, ll2, mid: midpoint(ll1, ll2) }
+  }).filter(Boolean)
+
+  const allPoints = pins.flatMap(p => [p.ll1, p.ll2])
+
+  return (
+    <div className="h-48 w-full rounded-2xl overflow-hidden border border-sand/30">
+      <MapContainer
+        center={[20, 0]}
+        zoom={2}
+        style={{ width: '100%', height: '100%', background: '#F5EFE0' }}
+        zoomControl={false}
+        scrollWheelZoom={false}
+      >
+        <TileLayer
+          url={`https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg${import.meta.env.VITE_STADIA_MAPS_API_KEY ? `?api_key=${import.meta.env.VITE_STADIA_MAPS_API_KEY}` : ''}`}
+        />
+        {allPoints.length > 0 && <FitBounds points={allPoints} />}
+        {pins.map(({ convo, ll1, ll2, mid }) => (
+          <React.Fragment key={convo.id}>
+            <Polyline
+              positions={[[ll1.lat, ll1.lng], [ll2.lat, ll2.lng]]}
+              pathOptions={{ color: '#C4622D', weight: 1.5, opacity: 0.4, dashArray: '4 4' }}
+            />
+            <CircleMarker
+              center={[ll1.lat, ll1.lng]}
+              radius={5}
+              pathOptions={{ fillColor: '#C4622D', fillOpacity: 0.8, color: '#C4622D', weight: 1 }}
+            />
+            <CircleMarker
+              center={[ll2.lat, ll2.lng]}
+              radius={5}
+              pathOptions={{ fillColor: '#7A9E7E', fillOpacity: 0.8, color: '#7A9E7E', weight: 1 }}
+            />
+            <CircleMarker
+              center={[mid.lat, mid.lng]}
+              radius={7}
+              pathOptions={{ fillColor: '#D4A96A', fillOpacity: 0.9, color: '#9B7653', weight: 1.5 }}
+              eventHandlers={{ click: () => setActiveQuestion(activeQuestion === convo.id ? null : convo.id) }}
+            >
+              {activeQuestion === convo.id && (
+                <Popup>
+                  <div className="max-w-[200px] text-center p-1">
+                    <p className="text-[10px] uppercase tracking-widest text-sand font-semibold mb-1">✦ Halfway</p>
+                    <p className="font-serif italic text-brown-deep text-xs leading-relaxed">
+                      "{convo.halfwayQuestion}"
+                    </p>
+                  </div>
+                </Popup>
+              )}
+            </CircleMarker>
+          </React.Fragment>
+        ))}
+      </MapContainer>
+    </div>
+  )
+}

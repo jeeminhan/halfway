@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import HistoryMap from './HistoryMap'
 
 function ConvoCard({ convo }) {
   const [expanded, setExpanded] = useState(false)
@@ -104,9 +105,12 @@ export default function ConversationHistory({ conversations, onBack }) {
             No conversations yet.
           </p>
         ) : (
-          conversations.map(convo => (
-            <ConvoCard key={convo.id} convo={convo} />
-          ))
+          <>
+            <HistoryMap conversations={conversations} />
+            {conversations.map(convo => (
+              <ConvoCard key={convo.id} convo={convo} />
+            ))}
+          </>
         )}
       </div>
     </div>
