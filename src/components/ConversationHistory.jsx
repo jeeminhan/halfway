@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import HistoryMap from './HistoryMap'
+import CommunityFeed from './CommunityFeed'
 
 function ConvoCard({ convo }) {
   const [expanded, setExpanded] = useState(false)
@@ -90,17 +91,46 @@ function ConvoCard({ convo }) {
 }
 
 export default function ConversationHistory({ conversations, onBack }) {
+  const [view, setView] = useState('mine')
+
   return (
     <div className="min-h-screen bg-parchment">
+      {/* Header */}
       <div className="px-6 py-4 flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-paper-mid transition-colors">
           <ArrowLeft size={18} className="text-brown-deep/50" />
         </button>
-        <h1 className="font-serif text-xl font-bold text-brown-deep">Past Conversations</h1>
+        <h1 className="font-serif text-xl font-bold text-brown-deep">
+          {view === 'mine' ? 'Past Conversations' : 'Community'}
+        </h1>
+      </div>
+
+      {/* Toggle */}
+      <div className="px-6 mb-4 max-w-md mx-auto">
+        <div className="flex bg-paper-mid rounded-2xl p-1 gap-1">
+          <button
+            onClick={() => setView('mine')}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              view === 'mine' ? 'bg-parchment text-brown-deep shadow-sm' : 'text-brown-deep/40'
+            }`}
+          >
+            My Conversations
+          </button>
+          <button
+            onClick={() => setView('community')}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              view === 'community' ? 'bg-parchment text-brown-deep shadow-sm' : 'text-brown-deep/40'
+            }`}
+          >
+            Community
+          </button>
+        </div>
       </div>
 
       <div className="px-6 pb-10 space-y-4 max-w-md mx-auto">
-        {conversations.length === 0 ? (
+        {view === 'community' ? (
+          <CommunityFeed />
+        ) : conversations.length === 0 ? (
           <p className="font-serif italic text-brown-deep/30 text-center mt-20 text-lg">
             No conversations yet.
           </p>
