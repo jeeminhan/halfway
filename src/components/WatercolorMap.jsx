@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, GeoJSON, useMap, CircleMarker, Polyline } from 'react-leaflet'
 import * as topojson from 'topojson-client'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { getLatLng, midpoint } from '../utils/geo'
 
 function FlyToCountry({ selectedFeature }) {
   const map = useMap()
@@ -19,7 +20,19 @@ function FlyToCountry({ selectedFeature }) {
   return null
 }
 
-export default function WatercolorMap({ onCountryClick, selectedCountry, markers = [] }) {
+function FitTwo({ pos1, pos2 }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!pos1 || !pos2) return
+    map.fitBounds([
+      [Math.min(pos1.lat, pos2.lat) - 5, Math.min(pos1.lng, pos2.lng) - 10],
+      [Math.max(pos1.lat, pos2.lat) + 5, Math.max(pos1.lng, pos2.lng) + 10],
+    ], { duration: 1 })
+  }, [pos1?.lat, pos1?.lng, pos2?.lat, pos2?.lng]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
+export default function WatercolorMap({ onCountryClick, selectedCountry, markers = [], secondaryCountry, secondaryCity }) {
   const [geoData, setGeoData] = useState(null)
   const [selectedFeature, setSelectedFeature] = useState(null)
 
@@ -139,6 +152,28 @@ export default function WatercolorMap({ onCountryClick, selectedCountry, markers
         />
       )}
       {selectedFeature && <FlyToCountry selectedFeature={selectedFeature} />}
+      {(() => {
+        if (!selectedCountry || !secondaryCountry) return null
+        const pos1 = getLatLng(secondaryCountry, secondaryCity)
+        const pos2 = getLatLng(selectedCountry)
+        if (!pos1 || !pos2) return null
+        const mid = midpoint(pos1, pos2)
+        return (
+          <>
+            <FitTwo pos1={pos1} pos2={pos2} />
+            <Polyline
+              positions={[[pos1.lat, pos1.lng], [pos2.lat, pos2.lng]]}
+              pathOptions={{ color: '#C4622D', weight: 1.5, opacity: 0.35, dashArray: '5 5' }}
+            />
+            <CircleMarker center={[pos1.lat, pos1.lng]} radius={6}
+              pathOptions={{ fillColor: '#C4622D', fillOpacity: 0.85, color: '#fff', weight: 1.5 }} />
+            <CircleMarker center={[pos2.lat, pos2.lng]} radius={6}
+              pathOptions={{ fillColor: '#7A9E7E', fillOpacity: 0.85, color: '#fff', weight: 1.5 }} />
+            <CircleMarker center={[mid.lat, mid.lng]} radius={5}
+              pathOptions={{ fillColor: '#D4A96A', fillOpacity: 1, color: '#9B7653', weight: 1.5 }} />
+          </>
+        )
+      })()}
     </MapContainer>
   )
 }

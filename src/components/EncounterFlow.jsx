@@ -169,6 +169,8 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
                   initialCountry={initialPerson2?.country}
                   initialCity={initialPerson2?.city}
                   locked={!!initialPerson2?.isDemo}
+                  secondaryCountry={person1.country}
+                  secondaryCity={person1.city}
                   onConfirm={(data) => {
                     const p2 = { ...person2, country: data.country, city: data.city, isDemo: person2.isDemo }
                     setPerson2(p2)
