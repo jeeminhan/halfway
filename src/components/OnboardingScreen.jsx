@@ -3,6 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const SLIDES = [
   {
+    icon: '🌉',
+    heading: 'Two worlds. One bridge.',
+    body: 'Halfway is for meeting someone from a completely different culture and country — and finding the thing you share without knowing it. The conversation might serendipitously continue. Or it quietly fades. Either way, something real happened.',
+  },
+  {
     icon: '🌍',
     heading: 'Where are you really from?',
     body: 'Not the passport answer. The real one — the place that shaped how you see everything.',
