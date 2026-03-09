@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { drawTopics } from '../data/topics'
 import HalfwayQuestion from './HalfwayQuestion'
 import CountryPicker from './CountryPicker'
+import VoiceButton from './VoiceButton'
 
 const TOPICS_PER_GAME = 3
 const FALLBACK_QUESTION = "What if the thing you're both homesick for isn't actually a place?"
@@ -259,12 +260,20 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
 
               {/* Answer 1 */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                    {person1.city || person1.country || 'You'}
-                  </p>
-                  {person1.isDemo && (
-                    <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-terracotta">
+                      {person1.city || person1.country || 'You'}
+                    </p>
+                    {person1.isDemo && (
+                      <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
+                    )}
+                  </div>
+                  {!person1.isDemo && (
+                    <VoiceButton
+                      accentColor="terracotta"
+                      onTranscript={(t) => setAnswer1(t)}
+                    />
                   )}
                 </div>
                 <textarea
@@ -278,12 +287,20 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
 
               {/* Answer 2 */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-sage">
-                    {person2.city || person2.country || 'Them'}
-                  </p>
-                  {person2.isDemo && (
-                    <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-sage">
+                      {person2.city || person2.country || 'Them'}
+                    </p>
+                    {person2.isDemo && (
+                      <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
+                    )}
+                  </div>
+                  {!person2.isDemo && (
+                    <VoiceButton
+                      accentColor="sage"
+                      onTranscript={(t) => setAnswer2(t)}
+                    />
                   )}
                 </div>
                 <textarea
