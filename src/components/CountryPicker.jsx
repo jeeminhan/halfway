@@ -4,7 +4,7 @@ import { Search } from 'lucide-react'
 import { Country, City } from 'country-state-city'
 import WatercolorMap from './WatercolorMap'
 
-export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm, onSkip, initialCountry, initialCity, locked }) {
+export default function CountryPicker({ label, accentColor = 'terracotta', onConfirm, onSkip, initialCountry, initialCity, locked, secondaryCountry, secondaryCity }) {
   const [selectedCountry, setSelectedCountry] = useState(initialCountry || '')
   const [selectedIso, setSelectedIso] = useState('')
   const [searchTerm, setSearchTerm] = useState(initialCountry || '')
@@ -120,6 +120,8 @@ export default function CountryPicker({ label, accentColor = 'terracotta', onCon
           <WatercolorMap
             selectedCountry={selectedCountry}
             onCountryClick={locked ? undefined : handleMapClick}
+            secondaryCountry={secondaryCountry}
+            secondaryCity={secondaryCity}
           />
         </div>
         {locked && <div className="absolute inset-0 z-[500]" />}
