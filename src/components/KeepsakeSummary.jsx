@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Share2, Check } from 'lucide-react'
 
-export default function KeepsakeSummary({ keepsake, person1, person2, onClose }) {
+export default function KeepsakeSummary({ keepsake, person1, person2, audioUrl, onClose }) {
   const [copied, setCopied] = useState(false)
 
   const shareText = [keepsake.thread, keepsake.reflection].filter(Boolean).join('\n\n')
@@ -96,6 +96,26 @@ export default function KeepsakeSummary({ keepsake, person1, person2, onClose })
           <p className="font-serif italic text-brown-deep/50 text-sm leading-relaxed">
             {keepsake.continuePrompt}
           </p>
+        </motion.div>
+      )}
+
+      {/* Audio Playback */}
+      {audioUrl && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="rounded-2xl p-5 bg-paper-mid border border-sand/40 space-y-3"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40">Your Conversation</p>
+          <audio controls src={audioUrl} className="w-full h-10" />
+          <a
+            href={audioUrl}
+            download={`halfway-${Date.now()}.webm`}
+            className="inline-block text-xs text-terracotta underline underline-offset-2"
+          >
+            Download recording
+          </a>
         </motion.div>
       )}
 

@@ -82,7 +82,7 @@ export default function RecordingScreen({ topics, person1, person2, onFinish, on
       const reader = new FileReader()
       reader.onloadend = () => {
         const base64 = reader.result.split(',')[1]
-        onFinish({ audioBase64: base64, audioMimeType: mimeType })
+        onFinish({ audioBase64: base64, audioMimeType: mimeType, audioBlob: blob })
       }
       reader.readAsDataURL(blob)
     } else if (!hasRecorder && fallbackText.trim()) {

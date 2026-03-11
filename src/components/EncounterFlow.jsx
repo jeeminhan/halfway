@@ -16,6 +16,63 @@ const FALLBACK_KEEPSAKE = {
   continuePrompt: 'Stay in touch.',
 }
 
+// Generate contextual demo questions client-side when API is unavailable
+function generateDemoQuestions(p1, p2, setting, drawnTopics) {
+  const p1Place = p1.city || p1.country || 'your city'
+  const p2Place = p2.city || p2.country || 'their city'
+  const p1Occ = p1.occupation || 'person'
+  const p2Occ = p2.occupation || 'person'
+  const settingLabel = setting || 'this place'
+
+  const templates = {
+    loss: {
+      question1: `As a ${p1Occ} from ${p1Place}, what's something you left behind when you came here — not a thing, but a feeling or a rhythm — that still follows you around ${settingLabel}?`,
+      question2: `Growing up in ${p2Place} as a ${p2Occ}, what's a sound or smell from home that you'd give anything to walk into right now?`,
+    },
+    belonging: {
+      question1: `In ${p1Place}, where did you feel most like yourself? Is there anywhere in ${settingLabel} that comes close?`,
+      question2: `As a ${p2Occ} far from ${p2Place}, when was the last time you felt completely at home — not performing, not translating yourself — just existing?`,
+    },
+    beauty: {
+      question1: `What's something beautiful in ${p1Place} that most people walk past without noticing — something only someone who grew up there as a ${p1Occ} would see?`,
+      question2: `In ${p2Place}, what stops you in your tracks? Is there a moment or a season that makes everything else go quiet?`,
+    },
+    enough: {
+      question1: `As a ${p1Occ} from ${p1Place}, what would make your life feel complete — not successful, but complete?`,
+      question2: `If you could stop translating yourself between ${p2Place} and here, between being a ${p2Occ} and being yourself — what would that feel like?`,
+    },
+    home: {
+      question1: `When someone in ${settingLabel} asks "where are you from?" — do you say ${p1Place}, or has the answer gotten more complicated than that?`,
+      question2: `Is ${p2Place} still home, or is home something you're still looking for? What would home need to have for you to stop searching?`,
+    },
+    unknown: {
+      question1: `As a ${p1Occ} who left ${p1Place}, what are you still searching for that no city, no degree, no achievement has been able to give you?`,
+      question2: `What would it mean to be fully known — not just your ${p2Occ} self here, but the ${p2Place} version of you too — by someone who isn't going anywhere?`,
+    },
+  }
+
+  return drawnTopics.map(t => {
+    const tmpl = templates[t.id] || {
+      question1: `What's something about life in ${p1Place} as a ${p1Occ} that you wish people here understood?`,
+      question2: `What's something about ${p2Place} that you carry with you everywhere — something a ${p2Occ} from there just never loses?`,
+    }
+    return { ...t, question1: tmpl.question1, question2: tmpl.question2 }
+  })
+}
+
+// Generate contextual demo keepsake when API is unavailable
+function generateDemoKeepsake(p1, p2, setting) {
+  const p1Place = p1.city || p1.country || 'your city'
+  const p2Place = p2.city || p2.country || 'their city'
+  return {
+    thread: `Both of you — one from ${p1Place}, one from ${p2Place} — are carrying the same quiet hunger: to be fully known, in a place that feels like home, by someone who isn't going anywhere.`,
+    person1Window: `${p2Place} isn't just a place on a map — it's Sunday cooking, it's the sound of a language that holds things English can't, it's a version of home that travels with a person even when they leave.`,
+    person2Window: `${p1Place} shaped something deeper than culture — it gave them a way of seeing beauty in small moments, a longing for permanence that no amount of achievement here has been able to fill.`,
+    reflection: `You met in ${setting || 'a place'} you'll both eventually leave. But what you shared — that hunger to be known completely, to belong somewhere permanent — that's not going anywhere. What if there's a Person who already knows both versions of you, the ${p1Place} one and the one sitting here, and isn't planning on leaving?`,
+    continuePrompt: `Exchange numbers. This conversation isn't done yet.`,
+  }
+}
+
 export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, onClose }) {
   const [step, setStep] = useState('setting')
   const [setting, setSetting] = useState(null)
@@ -24,6 +81,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
   const [topics] = useState(() => drawTopics(3))
   const [enrichedTopics, setEnrichedTopics] = useState(null)
   const [keepsake, setKeepsake] = useState(null)
+  const [audioUrl, setAudioUrl] = useState(null)
 
   const displayTopics = enrichedTopics || topics
 
@@ -55,9 +113,13 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
           return found ? { ...t, question1: found.question1, question2: found.question2 } : t
         })
         setEnrichedTopics(enriched)
+      } else {
+        throw new Error('Insufficient questions')
       }
     } catch {
-      // fall back to default topics
+      // API unavailable — use client-side contextual demo questions
+      const demoTopics = generateDemoQuestions(p1, p2, s, drawnTopics)
+      setEnrichedTopics(demoTopics)
     }
     setStep('recording')
   }
@@ -68,6 +130,13 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
       setStep('who-them-occupation')
       return
     }
+
+    // Save audio locally if available
+    if (recordingData.audioBlob) {
+      const url = URL.createObjectURL(recordingData.audioBlob)
+      setAudioUrl(url)
+    }
+
     setStep('processing')
 
     const save = (k) => {
@@ -92,7 +161,9 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          ...recordingData,
+          audioBase64: recordingData.audioBase64,
+          audioMimeType: recordingData.audioMimeType,
+          transcript: recordingData.transcript,
           setting,
           person1: { city: person1.city, country: person1.country, occupation: person1.occupation },
           person2: { city: person2.city, country: person2.country, occupation: person2.occupation },
@@ -110,7 +181,8 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
       try {
         save(await attempt())
       } catch {
-        save(FALLBACK_KEEPSAKE)
+        // API unavailable — use contextual demo keepsake
+        save(generateDemoKeepsake(person1, person2, setting))
       }
     }
   }
@@ -229,6 +301,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
               keepsake={keepsake}
               person1={person1}
               person2={person2}
+              audioUrl={audioUrl}
               onClose={onClose}
             />
           </motion.div>
