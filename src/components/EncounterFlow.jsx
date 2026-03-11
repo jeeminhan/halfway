@@ -1,109 +1,33 @@
-import React, { useState, useEffect } from 'react'
+// src/components/EncounterFlow.jsx
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
 import { drawTopics } from '../data/topics'
-import HalfwayQuestion from './HalfwayQuestion'
+import SettingPicker from './SettingPicker'
+import OccupationPicker from './OccupationPicker'
 import CountryPicker from './CountryPicker'
-import VoiceButton from './VoiceButton'
+import RecordingScreen from './RecordingScreen'
+import KeepsakeSummary from './KeepsakeSummary'
 
-const TOPICS_PER_GAME = 3
-const FALLBACK_QUESTION = "What if the thing you're both homesick for isn't actually a place?"
+const FALLBACK_KEEPSAKE = {
+  thread: "Something happened here that words can't quite hold.",
+  person1Window: '',
+  person2Window: '',
+  reflection: "What if the thing you're both homesick for isn't actually a place?",
+  continuePrompt: 'Stay in touch.',
+}
 
 export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, onClose }) {
-  const [step, setStep] = useState(
-    initialPerson1 && !initialPerson2 ? 'who-them'
-    : 'who-you'
-  )
-  const [person1, setPerson1] = useState(initialPerson1 || { city: '', country: '', name: '' })
-  const [person2, setPerson2] = useState(initialPerson2 || { city: '', country: '', name: '' })
-  const [topics] = useState(() => drawTopics(TOPICS_PER_GAME))
+  const [step, setStep] = useState('setting')
+  const [setting, setSetting] = useState(null)
+  const [person1, setPerson1] = useState(initialPerson1 || { city: '', country: '', occupation: '' })
+  const [person2, setPerson2] = useState(initialPerson2 || { city: '', country: '', occupation: '' })
+  const [topics] = useState(() => drawTopics(3))
   const [enrichedTopics, setEnrichedTopics] = useState(null)
-  const [roundIndex, setRoundIndex] = useState(0)
-  const [rounds, setRounds] = useState([])
-  const [answer1, setAnswer1] = useState('')
-  const [answer2, setAnswer2] = useState('')
-  const [halfwayQuestion, setHalfwayQuestion] = useState(null)
+  const [keepsake, setKeepsake] = useState(null)
 
-  const currentTopic = (enrichedTopics || topics)[roundIndex]
-  const isLastRound = roundIndex === TOPICS_PER_GAME - 1
+  const displayTopics = enrichedTopics || topics
 
-  const DEMO_PERSON2 = { country: 'Canada', city: 'Toronto', isDemo: true }
-
-  const handleDemoPerson = () => {
-    setPerson2(DEMO_PERSON2)
-    generateTopics(person1, DEMO_PERSON2, topics)
-  }
-
-  // Pre-fill answers in demo mode
-  useEffect(() => {
-    if (step !== 'round') return
-    if (person1.isDemo) setAnswer1(currentTopic.demoAnswer1 || '')
-    if (person2.isDemo) setAnswer2(currentTopic.demoAnswer2 || '')
-  }, [roundIndex, step]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleRoundSubmit = () => {
-    if (!answer1.trim() || !answer2.trim()) return
-    const newRounds = [...rounds, {
-      topic: currentTopic.name,
-      topicObj: currentTopic,
-      answer1: answer1.trim(),
-      answer2: answer2.trim(),
-    }]
-    setRounds(newRounds)
-    setAnswer1('')
-    setAnswer2('')
-    if (isLastRound) {
-      generateHalfwayQuestion(newRounds)
-    } else {
-      setRoundIndex(i => i + 1)
-    }
-  }
-
-  const generateHalfwayQuestion = async (finalRounds) => {
-    setStep('generating')
-    try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 8000)
-      const res = await fetch('/api/halfway-question', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          person1City: person1.city,
-          person1Country: person1.country,
-          person1Answers: finalRounds.map(r => ({ topic: r.topic, answer: r.answer1 })),
-          person2City: person2.city,
-          person2Country: person2.country,
-          person2Answers: finalRounds.map(r => ({ topic: r.topic, answer: r.answer2 })),
-        })
-      })
-      clearTimeout(timeout)
-      const data = await res.json()
-      const q = data.question || FALLBACK_QUESTION
-      setHalfwayQuestion(q)
-      onSave({
-        id: `convo-${Date.now()}`,
-        person1,
-        person2,
-        rounds: finalRounds,
-        halfwayQuestion: q,
-        createdAt: new Date().toISOString(),
-      })
-    } catch {
-      setHalfwayQuestion(FALLBACK_QUESTION)
-      onSave({
-        id: `convo-${Date.now()}`,
-        person1,
-        person2,
-        rounds: finalRounds,
-        halfwayQuestion: FALLBACK_QUESTION,
-        createdAt: new Date().toISOString(),
-      })
-    }
-    setStep('halfway')
-  }
-
-  const generateTopics = async (p1, p2, drawnTopics) => {
+  const handleGenerateTopics = async (p1, p2, s, drawnTopics) => {
     setStep('loading-topics')
     try {
       const controller = new AbortController()
@@ -115,260 +39,201 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
         body: JSON.stringify({
           person1City: p1.city,
           person1Country: p1.country,
+          person1Occupation: p1.occupation,
           person2City: p2.city,
           person2Country: p2.country,
+          person2Occupation: p2.occupation,
+          setting: s,
           topics: drawnTopics.map(t => ({ id: t.id, name: t.name })),
-        })
+        }),
       })
       clearTimeout(timeout)
       const data = await res.json()
-      if (data.questions && Array.isArray(data.questions)) {
+      if (data.questions && data.questions.length >= 3) {
         const enriched = drawnTopics.map(t => {
           const found = data.questions.find(q => q.id === t.id)
-          return found ? { ...t, question: found.question } : t
+          return found ? { ...t, question1: found.question1, question2: found.question2 } : t
         })
         setEnrichedTopics(enriched)
       }
     } catch {
-      setEnrichedTopics(drawnTopics)
+      // fall back to default topics
     }
-    setStep('round')
+    setStep('recording')
   }
 
+  const handleRecordingFinish = async (recordingData) => {
+    if (recordingData.discard) {
+      setEnrichedTopics(null)
+      setStep('who-them-occupation')
+      return
+    }
+    setStep('processing')
+
+    const save = (k) => {
+      onSave({
+        id: `convo-${Date.now()}`,
+        person1,
+        person2,
+        setting,
+        topics: displayTopics,
+        keepsake: k,
+        createdAt: new Date().toISOString(),
+      })
+      setKeepsake(k)
+      setStep('keepsake')
+    }
+
+    const attempt = async () => {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000)
+      const res = await fetch('/api/summarize-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          ...recordingData,
+          setting,
+          person1: { city: person1.city, country: person1.country, occupation: person1.occupation },
+          person2: { city: person2.city, country: person2.country, occupation: person2.occupation },
+        }),
+      })
+      clearTimeout(timeout)
+      const data = await res.json()
+      if (!data.thread) throw new Error('Invalid response')
+      return data
+    }
+
+    try {
+      save(await attempt())
+    } catch {
+      try {
+        save(await attempt())
+      } catch {
+        save(FALLBACK_KEEPSAKE)
+      }
+    }
+  }
+
+  const loadingDots = (
+    <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+      <div className="flex gap-2">
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            className="w-2 h-2 rounded-full bg-terracotta/50"
+            animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
+          />
+        ))}
+      </div>
+      <p className="font-serif italic text-brown-deep/40 text-sm">
+        {step === 'loading-topics' ? 'Reading your worlds…' : 'Finding your halfway point…'}
+      </p>
+    </div>
+  )
+
   return (
-    <div className="h-screen bg-parchment flex flex-col">
-      <div className="flex justify-between items-center px-6 py-4 shrink-0 relative z-10">
-        <button onClick={onClose} className="font-serif text-lg font-bold text-brown-deep hover:text-brown-deep/70 transition-colors">Halfway</button>
-        <button onClick={onClose} className="p-2 rounded-full hover:bg-paper-mid transition-colors">
-          <X size={18} className="text-brown-deep/50" />
-        </button>
-      </div>
-
-      <div className="flex-1 flex flex-col min-h-0 relative">
-        {(step === 'who-you' || step === 'who-them') && (
-          <AnimatePresence mode="wait">
-            {step === 'who-you' && (
-              <motion.div key="who-you" initial={{ opacity: 1 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
-                <CountryPicker
-                  label="You"
-                  accentColor="terracotta"
-                  initialCountry={initialPerson1?.country}
-                  initialCity={initialPerson1?.city}
-                  locked={!!initialPerson1?.isDemo}
-                  onConfirm={(data) => {
-                    setPerson1(p => ({ ...p, country: data.country, city: data.city }))
-                    setStep('who-them')
-                  }}
-                />
-              </motion.div>
-            )}
-            {step === 'who-them' && (
-              <motion.div key="who-them" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col min-h-0">
-                <CountryPicker
-                  label="Them"
-                  accentColor="sage"
-                  initialCountry={initialPerson2?.country}
-                  initialCity={initialPerson2?.city}
-                  locked={!!initialPerson2?.isDemo}
-                  secondaryCountry={person1.country}
-                  secondaryCity={person1.city}
-                  onConfirm={(data) => {
-                    const p2 = { ...person2, country: data.country, city: data.city, isDemo: person2.isDemo }
-                    setPerson2(p2)
-                    generateTopics(person1, p2, topics)
-                  }}
-                  onSkip={initialPerson2 ? undefined : handleDemoPerson}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+    <div className="h-screen bg-parchment flex flex-col overflow-hidden">
+      <AnimatePresence mode="wait">
+        {step === 'setting' && (
+          <motion.div key="setting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1">
+            <SettingPicker onConfirm={(s) => { setSetting(s); setStep('who-you') }} />
+          </motion.div>
         )}
 
-        {step !== 'who-you' && step !== 'who-them' && (
-        <div className="flex-1 px-6 pb-10 max-w-md mx-auto w-full overflow-y-auto">
-        <AnimatePresence mode="wait">
-
-          {step === 'loading-topics' && (
-            <motion.div
-              key="loading-topics"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center min-h-[70vh] space-y-6"
-            >
-              <div className="flex gap-2">
-                {[0, 1, 2].map(i => (
-                  <motion.div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-terracotta/50"
-                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
-                  />
-                ))}
-              </div>
-              <p className="font-serif italic text-brown-deep/40 text-sm">
-                {step === 'loading-topics' ? 'Reading your worlds...' : 'Finding the halfway point...'}
-              </p>
-            </motion.div>
-          )}
-
-          {/* Round */}
-          {step === 'round' && (
-            <motion.div
-              key={`round-${roundIndex}`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="absolute inset-0 overflow-y-auto"
-            >
-            <div className="px-6 pb-10 max-w-md mx-auto w-full space-y-5 pt-2">
-              {/* Demo hint */}
-              {person1.isDemo && person2.isDemo && (
-                <div className="bg-terracotta/10 border border-terracotta/25 rounded-xl px-4 py-3 text-center">
-                  <p className="text-terracotta text-sm font-semibold">This is a demo</p>
-                  <p className="text-brown-deep/60 text-xs mt-0.5">Edit these answers — the question at the end will change.</p>
-                </div>
-              )}
-              {/* Progress */}
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-brown-deep/35 uppercase tracking-widest font-semibold">
-                  Question {roundIndex + 1} of {TOPICS_PER_GAME}
-                </p>
-                <div className="flex gap-1.5">
-                  {topics.map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-1 w-8 rounded-full transition-colors ${i <= roundIndex ? 'bg-terracotta' : 'bg-sand/30'}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Topic */}
-              <div
-                className="ink-card p-6 text-center border"
-                style={{
-                  background: `linear-gradient(135deg, ${currentTopic.color}14 0%, #EDE5D0 65%)`,
-                  borderColor: currentTopic.color + '30',
-                }}
-              >
-                <p className="text-4xl mb-2">{currentTopic.icon}</p>
-                <p className="font-serif text-xl font-bold text-brown-deep mb-1">{currentTopic.name}</p>
-                <p className="font-serif italic text-brown-deep/60 text-base leading-relaxed">
-                  "{currentTopic.question}"
-                </p>
-              </div>
-
-              {/* Answer 1 */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                      {person1.city || person1.country || 'You'}
-                    </p>
-                    {person1.isDemo && (
-                      <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
-                    )}
-                  </div>
-                  {!person1.isDemo && (
-                    <VoiceButton
-                      accentColor="terracotta"
-                      onTranscript={(t) => setAnswer1(t)}
-                    />
-                  )}
-                </div>
-                <textarea
-                  value={answer1}
-                  onChange={e => setAnswer1(e.target.value)}
-                  placeholder="Their answer..."
-                  rows={3}
-                  className="w-full bg-paper-mid border border-sand/40 rounded-xl p-3 text-brown-deep placeholder:text-brown-deep/25 focus:outline-none focus:border-terracotta resize-none text-sm"
-                />
-              </div>
-
-              {/* Answer 2 */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-sage">
-                      {person2.city || person2.country || 'Them'}
-                    </p>
-                    {person2.isDemo && (
-                      <span className="text-[10px] text-brown-deep/30 italic font-serif">example</span>
-                    )}
-                  </div>
-                  {!person2.isDemo && (
-                    <VoiceButton
-                      accentColor="sage"
-                      onTranscript={(t) => setAnswer2(t)}
-                    />
-                  )}
-                </div>
-                <textarea
-                  value={answer2}
-                  onChange={e => setAnswer2(e.target.value)}
-                  placeholder="Their answer..."
-                  rows={3}
-                  className="w-full bg-paper-mid border border-sand/40 rounded-xl p-3 text-brown-deep placeholder:text-brown-deep/25 focus:outline-none focus:border-sage resize-none text-sm"
-                />
-              </div>
-
-              <button
-                disabled={!answer1.trim() || !answer2.trim()}
-                onClick={handleRoundSubmit}
-                className="w-full bg-brown-deep text-parchment py-4 rounded-2xl font-semibold disabled:opacity-30 hover:bg-brown-deep/90 transition-colors"
-              >
-                {isLastRound ? 'Find the Halfway →' : 'Next Question →'}
-              </button>
-            </div>
-            </motion.div>
-          )}
-
-          {/* Generating */}
-          {step === 'generating' && (
-            <motion.div
-              key="generating"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute inset-0 flex flex-col items-center justify-center space-y-6"
-            >
-              <div className="flex gap-2">
-                {[0, 1, 2].map(i => (
-                  <motion.div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-terracotta/50"
-                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
-                  />
-                ))}
-              </div>
-              <p className="font-serif italic text-brown-deep/40 text-sm">
-                {step === 'loading-topics' ? 'Reading your worlds...' : 'Finding the halfway point...'}
-              </p>
-            </motion.div>
-          )}
-
-          {/* Halfway Question */}
-          {step === 'halfway' && halfwayQuestion && (
-            <motion.div
-              key="halfway"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 overflow-y-auto"
-            >
-              <HalfwayQuestion
-                question={halfwayQuestion}
-                person1={person1}
-                person2={person2}
-                onSave={onClose}
-              />
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-        </div>
+        {step === 'who-you' && (
+          <motion.div key="who-you" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col min-h-0">
+            <CountryPicker
+              label="You"
+              accentColor="terracotta"
+              initialCountry={initialPerson1?.country}
+              initialCity={initialPerson1?.city}
+              locked={!!initialPerson1?.isDemo}
+              onConfirm={(data) => {
+                setPerson1(p => ({ ...p, country: data.country, city: data.city }))
+                setStep('who-you-occupation')
+              }}
+            />
+          </motion.div>
         )}
-      </div>
+
+        {step === 'who-you-occupation' && (
+          <motion.div key="who-you-occupation" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
+            <OccupationPicker
+              label={person1.city || person1.country || 'you'}
+              accentColor="terracotta"
+              onConfirm={(occ) => {
+                setPerson1(p => ({ ...p, occupation: occ }))
+                setStep('who-them')
+              }}
+            />
+          </motion.div>
+        )}
+
+        {step === 'who-them' && (
+          <motion.div key="who-them" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col min-h-0">
+            <CountryPicker
+              label="Them"
+              accentColor="sage"
+              secondaryCountry={person1.country}
+              secondaryCity={person1.city}
+              onConfirm={(data) => {
+                setPerson2(p => ({ ...p, country: data.country, city: data.city }))
+                setStep('who-them-occupation')
+              }}
+              onSkip={initialPerson2 ? undefined : () => {
+                const demo = { country: 'Canada', city: 'Toronto', occupation: 'student', isDemo: true }
+                setPerson2(demo)
+                handleGenerateTopics(person1, demo, setting, topics)
+              }}
+            />
+          </motion.div>
+        )}
+
+        {step === 'who-them-occupation' && (
+          <motion.div key="who-them-occupation" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
+            <OccupationPicker
+              label={person2.city || person2.country || 'them'}
+              accentColor="sage"
+              onConfirm={(occ) => {
+                const p2 = { ...person2, occupation: occ }
+                setPerson2(p2)
+                handleGenerateTopics(person1, p2, setting, topics)
+              }}
+            />
+          </motion.div>
+        )}
+
+        {(step === 'loading-topics' || step === 'processing') && (
+          <motion.div key={step} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col">
+            {loadingDots}
+          </motion.div>
+        )}
+
+        {step === 'recording' && (
+          <motion.div key="recording" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
+            <RecordingScreen
+              topics={displayTopics}
+              person1={person1}
+              person2={person2}
+              onFinish={handleRecordingFinish}
+              onClose={onClose}
+            />
+          </motion.div>
+        )}
+
+        {step === 'keepsake' && keepsake && (
+          <motion.div key="keepsake" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 overflow-y-auto">
+            <KeepsakeSummary
+              keepsake={keepsake}
+              person1={person1}
+              person2={person2}
+              onClose={onClose}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
