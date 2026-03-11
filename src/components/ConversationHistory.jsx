@@ -43,19 +43,19 @@ function ConvoCard({ convo }) {
           </button>
         </div>
 
-        {/* Topics row */}
+        {/* Topics row — support both new topics shape and legacy rounds shape */}
         <div className="flex gap-2 flex-wrap">
-          {convo.rounds?.map((r, i) => (
+          {(convo.topics || convo.rounds)?.map((r, i) => (
             <span key={i} className="text-xs bg-sand/20 text-brown-deep/55 px-2 py-1 rounded-full">
-              {r.topicObj?.icon} {r.topic}
+              {r.icon || r.topicObj?.icon} {r.name || r.topic}
             </span>
           ))}
         </div>
 
-        {/* Halfway question always visible */}
-        {convo.halfwayQuestion && (
+        {/* Thread (new) or halfway question (legacy) always visible */}
+        {(convo.keepsake?.thread || convo.halfwayQuestion) && (
           <p className="font-serif italic text-brown-deep text-base leading-relaxed border-l-2 border-terracotta/30 pl-3">
-            "{convo.halfwayQuestion}"
+            "{convo.keepsake?.thread || convo.halfwayQuestion}"
           </p>
         )}
       </div>
