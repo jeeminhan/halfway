@@ -260,12 +260,34 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, saved
             Start a Conversation
           </button>
 
-          <button
+          <motion.button
             onClick={onDemo}
-            className="w-full border border-sand/50 text-brown-deep/60 py-3 rounded-2xl font-serif italic text-sm hover:border-terracotta/40 hover:text-brown-deep transition-colors"
+            animate={{
+              boxShadow: [
+                '0 0 0 rgba(193, 109, 83, 0)',
+                '0 0 18px rgba(193, 109, 83, 0.18)',
+                '0 0 0 rgba(193, 109, 83, 0)',
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-full border border-terracotta/60 text-terracotta py-3 rounded-2xl font-serif italic text-sm hover:border-terracotta hover:text-terracotta transition-colors flex items-center justify-center gap-2"
           >
-            Try a demo
-          </button>
+            <motion.span
+              animate={{ x: [0, 4, 0] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="text-terracotta"
+            >
+              ›
+            </motion.span>
+            <span>Try a demo</span>
+            <motion.span
+              animate={{ x: [0, -4, 0] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="text-terracotta"
+            >
+              ‹
+            </motion.span>
+          </motion.button>
 
           {hasHistory && (
             <button
