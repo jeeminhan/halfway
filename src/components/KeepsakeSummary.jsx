@@ -3,12 +3,13 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Share2, Check } from 'lucide-react'
 
-export default function KeepsakeSummary({ keepsake, topic, setting, person1, person2, audioUrl, onClose }) {
+export default function KeepsakeSummary({ keepsake, topic, setting, person1, person2, audioUrl, entryNote, onClose }) {
   const [copied, setCopied] = useState(false)
   const [email1, setEmail1] = useState('')
   const [email2, setEmail2] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [scheduledLabel, setScheduledLabel] = useState('')
+  const [scheduleState, setScheduleState] = useState('idle')
   const [showTranscript, setShowTranscript] = useState(false)
 
   const shareText = [keepsake.thread, keepsake.reflection].filter(Boolean).join('\n\n')
@@ -34,11 +35,13 @@ export default function KeepsakeSummary({ keepsake, topic, setting, person1, per
   const handleSchedule = async () => {
     const emails = [email1.trim(), email2.trim()].filter(Boolean)
     if (emails.length === 0) {
-      onClose()
+      setScheduleState('error')
+      setScheduledLabel('Add at least one email, or tap Done if you want to finish without sending it.')
       return
     }
 
     setSubmitting(true)
+    setScheduleState('idle')
     try {
       const res = await fetch('/api/schedule-followup', {
         method: 'POST',
@@ -63,11 +66,13 @@ export default function KeepsakeSummary({ keepsake, topic, setting, person1, per
 
       if (!res.ok) throw new Error('schedule_failed')
       const data = await res.json()
+      setScheduleState('success')
       setScheduledLabel(data.daysFromNow
         ? `A follow-up question will arrive in about ${data.daysFromNow} days.`
         : 'A follow-up question is on its way for next month.')
     } catch {
-      setScheduledLabel('Could not schedule the email right now.')
+      setScheduleState('error')
+      setScheduledLabel('Could not schedule the email right now. You can still finish, share this, or try again.')
     } finally {
       setSubmitting(false)
     }
@@ -86,6 +91,16 @@ export default function KeepsakeSummary({ keepsake, topic, setting, person1, per
         </p>
       </motion.div>
 
+      {entryNote && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-amber-300/60 bg-amber-50/70 px-4 py-3 text-sm text-brown-deep/75"
+        >
+          {entryNote}
+        </motion.div>
+      )}
+
       {/* Thread */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -97,11 +112,34 @@ export default function KeepsakeSummary({ keepsake, topic, setting, person1, per
         <p className="font-serif italic text-brown-deep leading-relaxed">{keepsake.thread}</p>
       </motion.div>
 
+      {(keepsake.person1Window || keepsake.person2Window) && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.16 }}
+          className="rounded-2xl p-5 bg-paper-mid border border-sand/40 space-y-4"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40">What opened in each other’s world</p>
+          {keepsake.person1Window && (
+            <div className="rounded-2xl bg-terracotta/8 border border-terracotta/15 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-terracotta mb-2">{p2Label} now sees</p>
+              <p className="text-sm text-brown-deep/75 leading-relaxed">{keepsake.person1Window}</p>
+            </div>
+          )}
+          {keepsake.person2Window && (
+            <div className="rounded-2xl bg-sage/10 border border-sage/15 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-sage mb-2">{p1Label} now sees</p>
+              <p className="text-sm text-brown-deep/75 leading-relaxed">{keepsake.person2Window}</p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Reflection */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.22 }}
+        transition={{ delay: 0.24 }}
         className="rounded-2xl p-5 bg-paper-mid border border-sand/40"
       >
         <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40 mb-3">A Closing Reflection</p>
@@ -113,9 +151,10 @@ export default function KeepsakeSummary({ keepsake, topic, setting, person1, per
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.32 }}
-          className="text-center px-4"
+          transition={{ delay: 0.34 }}
+          className="rounded-2xl p-5 bg-paper-mid border border-sand/40 text-center px-4"
         >
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40 mb-3">Don’t lose the thread</p>
           <p className="font-serif italic text-brown-deep/50 text-sm leading-relaxed">
             {keepsake.continuePrompt}
           </p>
@@ -132,7 +171,7 @@ export default function KeepsakeSummary({ keepsake, topic, setting, person1, per
           Get This By Email
         </p>
         <p className="text-sm text-brown-deep/65 leading-relaxed">
-          Leave one or both emails and Halfway will send this halfway point and reflection to your inbox. If it makes sense, a follow-up question may also arrive on its own next month.
+          Leave one or both emails and Halfway will send this halfway point and reflection to your inbox. If it makes sense, a follow-up question may also arrive on its own next month. This is optional.
         </p>
         <input
           type="email"
@@ -156,7 +195,7 @@ export default function KeepsakeSummary({ keepsake, topic, setting, person1, per
           {submitting ? 'Sending...' : 'Send this by email'}
         </button>
         {scheduledLabel && (
-          <p className="text-sm text-brown-deep/55 italic">{scheduledLabel}</p>
+          <p className={`text-sm italic ${scheduleState === 'error' ? 'text-terracotta' : 'text-brown-deep/55'}`}>{scheduledLabel}</p>
         )}
       </motion.div>
 

@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, Square } from 'lucide-react'
 
-const MAX_SECONDS = 5 * 60  // 5 minutes
-const WARN_AT = 4 * 60       // warn at 4 minutes
+const MAX_SECONDS = 5 * 60
+const WARN_AT = 4 * 60
 
 function formatTime(secs) {
   const m = Math.floor(secs / 60).toString().padStart(2, '0')
@@ -12,14 +12,17 @@ function formatTime(secs) {
   return `${m}:${s}`
 }
 
-export default function RecordingScreen({ topic, person1, person2, onFinish, onClose }) {
+export default function RecordingScreen({ topic, person1, person2, setting, isDemo, statusNote, onFinish, onClose }) {
   const [hasRecorder] = useState(() =>
     typeof MediaRecorder !== 'undefined' && !!navigator?.mediaDevices?.getUserMedia
   )
   const [recording, setRecording] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [hasRecorded, setHasRecorded] = useState(false)
+  const [textMode, setTextMode] = useState(false)
   const [fallbackText, setFallbackText] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [notice, setNotice] = useState('')
   const [showBackConfirm, setShowBackConfirm] = useState(false)
 
   const recorderRef = useRef(null)
@@ -34,19 +37,30 @@ export default function RecordingScreen({ topic, person1, person2, onFinish, onC
     }
   }, [])
 
+  const showRecorder = hasRecorder && !textMode
+
+  const switchToText = (msg = '') => {
+    clearInterval(intervalRef.current)
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    setRecording(false)
+    setHasRecorded(false)
+    chunksRef.current = []
+    if (msg) setNotice(msg)
+    setTextMode(true)
+  }
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
       chunksRef.current = []
+      setNotice('')
 
       const recorder = new MediaRecorder(stream)
       recorderRef.current = recorder
-
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
-
       recorder.start(1000)
       setRecording(true)
       setElapsed(0)
@@ -60,8 +74,8 @@ export default function RecordingScreen({ topic, person1, person2, onFinish, onC
           return prev + 1
         })
       }, 1000)
-    } catch (err) {
-      console.error('Microphone access denied:', err)
+    } catch {
+      switchToText('Microphone access was blocked. Type what each person shared instead.')
     }
   }
 
@@ -74,8 +88,7 @@ export default function RecordingScreen({ topic, person1, person2, onFinish, onC
   }
 
   const handleFinish = async () => {
-    if (hasRecorder && chunksRef.current.length > 0) {
-      // Wait for final ondataavailable chunk
+    if (showRecorder && chunksRef.current.length > 0) {
       await new Promise(r => setTimeout(r, 300))
       const mimeType = recorderRef.current?.mimeType || 'audio/webm'
       const blob = new Blob(chunksRef.current, { type: mimeType })
@@ -85,8 +98,37 @@ export default function RecordingScreen({ topic, person1, person2, onFinish, onC
         onFinish({ audioBase64: base64, audioMimeType: mimeType, audioBlob: blob })
       }
       reader.readAsDataURL(blob)
-    } else if (!hasRecorder && fallbackText.trim()) {
+    } else if (textMode && fallbackText.trim()) {
       onFinish({ transcript: fallbackText.trim() })
+    }
+  }
+
+  const generateDemoConversation = async () => {
+    setGenerating(true)
+    switchToText('Generating a demo conversation...')
+    try {
+      const res = await fetch('/api/generate-demo-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          person1: { name: person1.name, city: person1.city, country: person1.country, occupation: person1.occupation },
+          person2: { name: person2.name, city: person2.city, country: person2.country, occupation: person2.occupation },
+          setting,
+          topic: { name: topic?.name, question1: topic?.question1 || topic?.question, question2: topic?.question2 || topic?.question },
+        }),
+      })
+      if (!res.ok) throw new Error('API error')
+      const data = await res.json()
+      if (data.conversation) {
+        setFallbackText(data.conversation)
+        setNotice('Demo conversation generated. Edit it if you like, then tap Finish.')
+      } else {
+        throw new Error('No conversation returned')
+      }
+    } catch {
+      setNotice('Could not generate a demo conversation. Type one manually or try again.')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -95,7 +137,7 @@ export default function RecordingScreen({ topic, person1, person2, onFinish, onC
     setShowBackConfirm(true)
   }
 
-  const canFinish = hasRecorder
+  const canFinish = showRecorder
     ? (hasRecorded && chunksRef.current.length > 0)
     : fallbackText.trim().length > 10
 
@@ -116,6 +158,12 @@ export default function RecordingScreen({ topic, person1, person2, onFinish, onC
 
       {/* Topic prompt */}
       <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
+        {statusNote && (
+          <div className="rounded-2xl border border-amber-300/60 bg-amber-50/70 px-4 py-3 text-sm text-brown-deep/75">
+            {statusNote}
+          </div>
+        )}
+
         {topic && (
           <motion.div
             key={topic.id}
@@ -153,26 +201,71 @@ export default function RecordingScreen({ topic, person1, person2, onFinish, onC
           </motion.div>
         )}
 
-        {/* Text fallback */}
-        {!hasRecorder && (
-          <div className="space-y-2 pt-2">
-            <p className="text-xs text-brown-deep/50 italic">
-              Voice recording isn't available on this browser. Type what each person shared instead.
-            </p>
+        {/* Text input mode */}
+        {textMode && (
+          <div className="space-y-3 pt-2">
+            {notice && (
+              <p className="text-xs text-brown-deep/50 italic">{notice}</p>
+            )}
+            {isDemo && (
+              <button
+                onClick={generateDemoConversation}
+                disabled={generating}
+                className="w-full border-2 border-terracotta/50 text-terracotta py-3 rounded-xl text-sm font-semibold hover:border-terracotta hover:bg-terracotta/5 transition-colors disabled:opacity-40"
+              >
+                {generating ? 'Generating conversation...' : 'Generate a demo conversation with AI'}
+              </button>
+            )}
             <textarea
               value={fallbackText}
               onChange={e => setFallbackText(e.target.value)}
               placeholder="What did each person say in response to the two questions?"
-              rows={5}
+              rows={8}
               className="w-full bg-paper-mid border border-sand/40 rounded-xl p-3 text-brown-deep placeholder:text-brown-deep/25 focus:outline-none focus:border-terracotta resize-none text-sm"
             />
+            {hasRecorder && (
+              <button
+                onClick={() => {
+                  setTextMode(false)
+                  setNotice('')
+                }}
+                className="text-sm text-brown-deep/45 hover:text-brown-deep/70 transition-colors"
+              >
+                Back to recording
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* Recording controls */}
-      {hasRecorder && (
+      {showRecorder && (
         <div className="px-6 pt-2 shrink-0">
+          <div className="text-center mb-4 space-y-3">
+            <p className="text-xs text-brown-deep/45 italic">
+              Record the conversation, or type what was said.
+            </p>
+            {!recording && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => switchToText()}
+                  className="text-sm text-brown-deep/50 hover:text-brown-deep/70 transition-colors"
+                >
+                  Type it instead
+                </button>
+                {isDemo && (
+                  <button
+                    onClick={generateDemoConversation}
+                    disabled={generating}
+                    className="block mx-auto border-2 border-terracotta/50 text-terracotta px-5 py-2.5 rounded-xl text-sm font-semibold hover:border-terracotta hover:bg-terracotta/5 transition-colors disabled:opacity-40"
+                  >
+                    {generating ? 'Generating...' : 'Generate a demo conversation with AI'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           <AnimatePresence>
             {elapsed >= WARN_AT && (
               <motion.p

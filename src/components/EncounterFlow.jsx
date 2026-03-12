@@ -384,9 +384,12 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
   const [topicError, setTopicError] = useState('')
   const [processingError, setProcessingError] = useState('')
   const [pendingRecordingData, setPendingRecordingData] = useState(null)
+  const [recordingNotice, setRecordingNotice] = useState('')
+  const [keepsakeNotice, setKeepsakeNotice] = useState('')
 
   const handleGenerateTopicQuestions = async (p1, p2, s, topic) => {
     setTopicError('')
+    setRecordingNotice('')
     setStep('loading-topics')
     try {
       const controller = new AbortController()
@@ -407,8 +410,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
           setting: s,
           topics: [{ id: topic.id, name: topic.name }],
         }),
-      })
-      clearTimeout(timeout)
+      }).finally(() => clearTimeout(timeout))
       if (!res.ok) throw new Error('generation_failed')
       const data = await res.json()
       if (data.questions?.length) {
@@ -423,18 +425,22 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
         throw new Error('Insufficient questions')
       }
     } catch {
-      setActiveTopic(null)
-      setSelectedTopic(null)
-      setTopicError('Could not reach Gemini to write the opening questions. Check your API setup and try again.')
-      setStep('topic')
-      return
+      const fallbackTopic = generateDemoQuestions(p1, p2, s, [topic])[0]
+      setActiveTopic(fallbackTopic || {
+        ...topic,
+        question1: topic.question,
+        question2: topic.question,
+      })
+      setRecordingNotice("Gemini didn't respond, so Halfway wrote a local opening to keep the conversation moving.")
     }
+
     setStep('recording')
   }
 
   const processConversation = async (recordingData) => {
     setProcessingError('')
-    const save = (k) => {
+    setKeepsakeNotice('')
+    const save = (k, nextStep = 'reveal') => {
       onSave({
         id: `convo-${Date.now()}`,
         person1,
@@ -446,7 +452,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
         createdAt: new Date().toISOString(),
       })
       setKeepsake(k)
-      setStep('keepsake')
+      setStep(nextStep)
     }
 
     const attempt = async () => {
@@ -465,8 +471,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
           person1: { name: person1.name, city: person1.city, country: person1.country, occupation: person1.occupation },
           person2: { name: person2.name, city: person2.city, country: person2.country, occupation: person2.occupation },
         }),
-      })
-      clearTimeout(timeout)
+      }).finally(() => clearTimeout(timeout))
       if (!res.ok) throw new Error('generation_failed')
       const data = await res.json()
       if (!data.thread) throw new Error('Invalid response')
@@ -479,8 +484,13 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
       try {
         save(await attempt())
       } catch {
-        setProcessingError('Could not reach Gemini to create the halfway point. Retry when the API is available.')
-        setStep('processing-error')
+        const fallbackKeepsake = {
+          ...FALLBACK_KEEPSAKE,
+          ...generateDemoKeepsake(person1, person2, setting),
+          transcript: recordingData.transcript || '',
+        }
+        setKeepsakeNotice("Gemini didn't return a halfway point, so Halfway used a local fallback to preserve the moment.")
+        save(fallbackKeepsake)
       }
     }
   }
@@ -490,10 +500,13 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
       setActiveTopic(null)
       setSelectedTopic(null)
       setPendingRecordingData(null)
+      setRecordingNotice('')
+      setKeepsakeNotice('')
       setStep('topic')
       return
     }
 
+    setRecordingNotice('')
     if (recordingData.audioBlob) {
       const url = URL.createObjectURL(recordingData.audioBlob)
       setAudioUrl(url)
@@ -521,6 +534,9 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
       </p>
     </div>
   )
+
+  const revealLine = keepsake?.thread || FALLBACK_KEEPSAKE.thread
+  const revealPrompt = keepsake?.continuePrompt || 'Stay with this for a second before you move on.'
 
   const showHeader = step !== 'recording'
 
@@ -658,9 +674,64 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
               topic={activeTopic}
               person1={person1}
               person2={person2}
+              setting={setting}
+              isDemo={Boolean(person1.isDemo || person2.isDemo)}
+              statusNote={recordingNotice}
               onFinish={handleRecordingFinish}
               onClose={onClose}
             />
+          </motion.div>
+        )}
+
+        {step === 'reveal' && keepsake && (
+          <motion.div
+            key="reveal"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="flex-1 overflow-y-auto"
+          >
+            <div className="min-h-screen bg-parchment px-6 py-10 flex items-center justify-center">
+              <div className="w-full max-w-2xl space-y-6 text-center">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-terracotta/70">The Halfway Point</p>
+                  <h1 className="font-serif text-3xl md:text-5xl font-bold text-brown-deep leading-tight">
+                    Something real opened here.
+                  </h1>
+                  <p className="font-serif italic text-brown-deep/55 leading-relaxed max-w-xl mx-auto">
+                    Halfway listened for the one thread worth carrying forward.
+                  </p>
+                </div>
+
+                {keepsakeNotice && (
+                  <div className="rounded-2xl border border-amber-300/60 bg-amber-50/70 px-4 py-3 text-sm text-brown-deep/75">
+                    {keepsakeNotice}
+                  </div>
+                )}
+
+                <div className="rounded-[28px] border border-terracotta/20 bg-terracotta/10 px-6 py-8 md:px-10 md:py-10 space-y-5">
+                  <div className="w-12 h-px bg-terracotta/35 mx-auto" />
+                  <p className="font-serif italic text-brown-deep text-2xl md:text-3xl leading-relaxed">
+                    "{revealLine}"
+                  </p>
+                  <p className="text-sm text-brown-deep/50 leading-relaxed max-w-lg mx-auto">
+                    {revealPrompt}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setStep('keepsake')}
+                    className="w-full max-w-sm bg-brown-deep text-parchment py-4 rounded-2xl font-semibold hover:bg-brown-deep/90 transition-colors"
+                  >
+                    See the full keepsake
+                  </button>
+                  <p className="text-xs text-brown-deep/35 italic">
+                    The thread first. The fuller reflection next.
+                  </p>
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -673,6 +744,7 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
               person1={person1}
               person2={person2}
               audioUrl={audioUrl}
+              entryNote={keepsakeNotice}
               onClose={onClose}
             />
           </motion.div>
