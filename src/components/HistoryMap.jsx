@@ -80,10 +80,23 @@ export default function HistoryMap({ items, activeId, onSelect, heightClass = 'h
               {activeQuestion === item.id && (
                 <Popup>
                   <div className="max-w-[220px] text-center p-1">
-                    <p className="text-[10px] uppercase tracking-widest text-sand font-semibold mb-1">✦ Shared Thread</p>
+                    <p className="text-[10px] uppercase tracking-widest text-sand font-semibold mb-1">Shared thread</p>
+                    {item.topic?.name && (
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-brown-deep/45 mb-2">
+                        {item.topic.icon ? `${item.topic.icon} ` : ''}{item.topic.name}
+                      </p>
+                    )}
                     <p className="font-serif italic text-brown-deep text-xs leading-relaxed">
                       "{item.keepsake?.thread || item.halfwayQuestion}"
                     </p>
+                    {item.createdAt && (
+                      <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-brown-deep/35">
+                        {new Date(item.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    )}
                   </div>
                 </Popup>
               )}
