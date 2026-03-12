@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Country, City } from 'country-state-city'
 
 const DEMO_STEPS = [
   { type: 'cities', content: 'Seoul · Toronto' },
@@ -19,16 +18,8 @@ const STEP_BLOOMS = [
   'radial-gradient(ellipse 80% 60% at 50% 45%, rgba(212, 169, 106, 0.12) 0%, transparent 72%)',
 ]
 
-export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, savedPerson1 }) {
+export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, onSettings, savedPerson1 }) {
   const [step, setStep] = useState(0)
-  const [countrySearch, setCountrySearch] = useState(savedPerson1?.country || '')
-  const [selectedCountry, setSelectedCountry] = useState(savedPerson1?.country || '')
-  const [selectedIso, setSelectedIso] = useState('')
-  const [citySearch, setCitySearch] = useState(savedPerson1?.city || '')
-  const [selectedCity, setSelectedCity] = useState(savedPerson1?.city || '')
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false)
-  const [showCityDropdown, setShowCityDropdown] = useState(false)
-  const [locationSaved, setLocationSaved] = useState(!!savedPerson1?.country)
 
   useEffect(() => {
     const duration = STEP_DURATIONS[step] ?? 2000
@@ -38,53 +29,8 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, saved
     return () => clearTimeout(timer)
   }, [step])
 
-  const allCountries = useMemo(() => Country.getAllCountries(), [])
-
-  // Restore ISO code for savedPerson1 so city lookup works
-  useEffect(() => {
-    if (savedPerson1?.country && !selectedIso) {
-      const match = allCountries.find(c => c.name === savedPerson1.country)
-      if (match) setSelectedIso(match.isoCode)
-    }
-  }, [allCountries]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const cities = useMemo(() => {
-    if (!selectedIso) return []
-    return City.getCitiesOfCountry(selectedIso) || []
-  }, [selectedIso])
-
-  const filteredCountries = useMemo(() => {
-    if (!countrySearch.trim()) return []
-    return allCountries
-      .filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
-      .slice(0, 5)
-  }, [countrySearch, allCountries])
-
-  const filteredCities = useMemo(() => {
-    if (!citySearch.trim()) return cities.slice(0, 6)
-    return cities
-      .filter(c => c.name.toLowerCase().includes(citySearch.toLowerCase()))
-      .slice(0, 6)
-  }, [citySearch, cities])
-
-  const handleCountrySelect = (name, isoCode) => {
-    setSelectedCountry(name)
-    setSelectedIso(isoCode)
-    setCountrySearch(name)
-    setShowCountryDropdown(false)
-    setSelectedCity('')
-    setCitySearch('')
-    setLocationSaved(false)
-  }
-
-  const handleConfirmLocation = () => {
-    localStorage.setItem('halfway-person1', JSON.stringify({ country: selectedCountry, city: selectedCity.trim() }))
-    setLocationSaved(true)
-  }
-
   const handleStart = () => {
-    if (!selectedCountry) return
-    onStart({ country: selectedCountry, city: selectedCity.trim() })
+    onStart(savedPerson1)
   }
 
   const current = DEMO_STEPS[step]
@@ -93,6 +39,14 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, saved
     <div className="min-h-screen flex flex-col items-center justify-between px-6 py-16 max-w-md mx-auto">
       {/* Demo area */}
       <div className="relative flex-1 flex flex-col items-center justify-center w-full">
+        <div className="w-full text-center mb-8 space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-terracotta/70">
+            What This Is
+          </p>
+          <p className="font-serif italic text-brown-deep/45 text-sm leading-relaxed max-w-xs mx-auto">
+            A conversation starter for two strangers who want to get past small talk quickly.
+          </p>
+        </div>
         <AnimatePresence mode="wait">
           <motion.div
             key={`bloom-${step}`}
@@ -156,108 +110,43 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, saved
         <div>
           <h1 className="font-serif text-5xl font-bold text-brown-deep">Halfway</h1>
           <p className="text-brown-deep/40 mt-2 text-sm italic font-serif">
-            Where are you really from?
+            For meeting someone new and finding a real thread to keep talking.
           </p>
         </div>
 
-        {/* Your location */}
-        <div className="text-left space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-terracotta px-1">You</p>
-
-          {/* Country */}
-          <div className="relative">
-            <input
-              value={countrySearch}
-              onChange={e => {
-                setCountrySearch(e.target.value)
-                setShowCountryDropdown(true)
-                setSelectedCountry('')
-                setSelectedIso('')
-                setSelectedCity('')
-                setCitySearch('')
-              }}
-              onFocus={() => setShowCountryDropdown(true)}
-              onBlur={() => setTimeout(() => setShowCountryDropdown(false), 150)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && filteredCountries.length > 0) {
-                  handleCountrySelect(filteredCountries[0].name, filteredCountries[0].isoCode)
-                }
-              }}
-              placeholder="Your country"
-              className="w-full bg-paper-mid border border-sand/40 rounded-xl px-4 py-3 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none focus:border-terracotta text-sm"
-            />
-            {showCountryDropdown && filteredCountries.length > 0 && (
-              <div className="absolute top-full mt-1 left-0 right-0 bg-parchment border border-sand/40 rounded-xl shadow-xl overflow-hidden z-20">
-                {filteredCountries.map(c => (
-                  <button
-                    key={c.isoCode}
-                    onMouseDown={() => handleCountrySelect(c.name, c.isoCode)}
-                    className="w-full text-left px-4 py-2.5 text-sm text-brown-deep hover:bg-paper-mid transition-colors border-b border-sand/20 last:border-0"
-                  >
-                    {c.flag} {c.name}
-                  </button>
-                ))}
-              </div>
-            )}
+        <div className="text-left bg-paper-mid border border-sand/30 rounded-2xl p-4 space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-brown-deep/45">
+            How It Works
+          </p>
+          <div className="space-y-2 text-sm text-brown-deep/70 leading-relaxed">
+            <p><span className="font-semibold text-brown-deep">1.</span> Open it with someone you just met.</p>
+            <p><span className="font-semibold text-brown-deep">2.</span> Pick one topic and let Halfway write one question for each of you.</p>
+            <p><span className="font-semibold text-brown-deep">3.</span> After you talk, it gives you the halfway point worth continuing.</p>
           </div>
-
-          {/* City — only shown once country selected */}
-          {selectedCountry && (
-            <div className="relative">
-              <input
-                value={citySearch}
-                onChange={e => {
-                  setCitySearch(e.target.value)
-                  setSelectedCity(e.target.value)
-                  setShowCityDropdown(true)
-                  setLocationSaved(false)
-                }}
-                onFocus={() => setShowCityDropdown(true)}
-                onBlur={() => setTimeout(() => setShowCityDropdown(false), 150)}
-                placeholder="Your city (optional)"
-                className="w-full bg-paper-mid border border-sand/40 rounded-xl px-4 py-3 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none focus:border-terracotta text-sm"
-              />
-              {showCityDropdown && filteredCities.length > 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-parchment border border-sand/40 rounded-xl shadow-xl overflow-hidden z-20 max-h-40 overflow-y-auto">
-                  {filteredCities.map(c => (
-                    <button
-                      key={`${c.name}-${c.stateCode}`}
-                      onMouseDown={() => {
-                        setSelectedCity(c.name)
-                        setCitySearch(c.name)
-                        setShowCityDropdown(false)
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-brown-deep hover:bg-paper-mid transition-colors border-b border-sand/20 last:border-0"
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {selectedCountry && (
-          <button
-            onClick={handleConfirmLocation}
-            className={`w-full py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
-              locationSaved
-                ? 'bg-sage/15 border-sage/30 text-sage'
-                : 'bg-paper-mid border-sand/40 text-brown-deep hover:border-terracotta'
-            }`}
-          >
-            {locationSaved ? '✓ Location saved' : 'Confirm my location'}
-          </button>
+        {savedPerson1 && (
+          <div className="text-left space-y-1 bg-paper-mid border border-sand/30 rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <p className="font-serif font-bold text-brown-deep text-base">{savedPerson1.name}</p>
+              <button onClick={onSettings} className="text-xs text-brown-deep/40 hover:text-terracotta transition-colors">
+                Edit ✎
+              </button>
+            </div>
+            <p className="text-sm text-brown-deep/60">
+              {savedPerson1.city ? `${savedPerson1.city}, ` : ''}{savedPerson1.country}
+              {savedPerson1.occupation ? ` · ${savedPerson1.occupation}` : ''}
+            </p>
+          </div>
         )}
 
         <div className="space-y-3">
           <button
             onClick={handleStart}
-            disabled={!selectedCountry}
+            disabled={!savedPerson1?.country}
             className="w-full bg-brown-deep text-parchment py-4 rounded-2xl font-semibold text-base hover:bg-brown-deep/90 transition-colors disabled:opacity-35"
           >
-            Start a Conversation
+            Start the Conversation
           </button>
 
           <motion.button
@@ -279,7 +168,7 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, saved
             >
               ›
             </motion.span>
-            <span>Try a demo</span>
+            <span>See the demo flow</span>
             <motion.span
               animate={{ x: [0, -4, 0] }}
               transition={{ duration: 1, repeat: Infinity }}
@@ -294,7 +183,7 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, saved
               onClick={onHistory}
               className="w-full text-brown-deep/50 py-2 text-sm hover:text-brown-deep transition-colors font-serif italic"
             >
-              Past Conversations
+              Open Threads
             </button>
           )}
         </div>

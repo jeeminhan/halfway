@@ -12,7 +12,7 @@ function formatTime(secs) {
   return `${m}:${s}`
 }
 
-export default function RecordingScreen({ topics, person1, person2, onFinish, onClose }) {
+export default function RecordingScreen({ topic, person1, person2, onFinish, onClose }) {
   const [hasRecorder] = useState(() =>
     typeof MediaRecorder !== 'undefined' && !!navigator?.mediaDevices?.getUserMedia
   )
@@ -103,7 +103,9 @@ export default function RecordingScreen({ topics, person1, person2, onFinish, on
     <div className="h-screen bg-parchment flex flex-col relative">
       {/* Header */}
       <div className="flex justify-between items-center px-6 py-4 shrink-0">
-        <span className="font-serif text-lg font-bold text-brown-deep">Halfway</span>
+        <span className="font-serif text-lg font-bold text-brown-deep">
+          {person1.name && person2.name ? `${person1.name} × ${person2.name}` : 'Halfway'}
+        </span>
         <button
           onClick={handleBackRequest}
           className="p-2 rounded-full hover:bg-paper-mid transition-colors"
@@ -112,14 +114,14 @@ export default function RecordingScreen({ topics, person1, person2, onFinish, on
         </button>
       </div>
 
-      {/* Topic prompts */}
+      {/* Topic prompt */}
       <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
-        {topics.map((topic, i) => (
+        {topic && (
           <motion.div
             key={topic.id}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: 0.08 }}
             className="rounded-2xl p-5 border"
             style={{
               background: `linear-gradient(135deg, ${topic.color}14 0%, #EDE5D0 65%)`,
@@ -133,7 +135,7 @@ export default function RecordingScreen({ topics, person1, person2, onFinish, on
             <div className="space-y-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-terracotta mb-1">
-                  {person1.city || person1.country || 'You'}
+                  {person1.name || person1.city || person1.country || 'You'}
                 </p>
                 <p className="font-serif italic text-brown-deep/70 text-sm leading-relaxed">
                   "{topic.question1 || topic.question}"
@@ -141,7 +143,7 @@ export default function RecordingScreen({ topics, person1, person2, onFinish, on
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-sage mb-1">
-                  {person2.city || person2.country || 'Them'}
+                  {person2.name || person2.city || person2.country || 'Them'}
                 </p>
                 <p className="font-serif italic text-brown-deep/70 text-sm leading-relaxed">
                   "{topic.question2 || topic.question}"
@@ -149,18 +151,18 @@ export default function RecordingScreen({ topics, person1, person2, onFinish, on
               </div>
             </div>
           </motion.div>
-        ))}
+        )}
 
         {/* Text fallback */}
         {!hasRecorder && (
           <div className="space-y-2 pt-2">
             <p className="text-xs text-brown-deep/50 italic">
-              Voice recording isn't available on this browser. Type a summary of your conversation instead.
+              Voice recording isn't available on this browser. Type what each person shared instead.
             </p>
             <textarea
               value={fallbackText}
               onChange={e => setFallbackText(e.target.value)}
-              placeholder="What did you talk about?"
+              placeholder="What did each person say in response to the two questions?"
               rows={5}
               className="w-full bg-paper-mid border border-sand/40 rounded-xl p-3 text-brown-deep placeholder:text-brown-deep/25 focus:outline-none focus:border-terracotta resize-none text-sm"
             />

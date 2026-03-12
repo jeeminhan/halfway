@@ -3,25 +3,30 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const SLIDES = [
   {
-    icon: '🌉',
-    heading: 'Two worlds. One bridge.',
-    body: 'Halfway is for meeting someone from a completely different culture and country — and finding the thing you share without knowing it. The conversation might serendipitously continue. Or it quietly fades. Either way, something real happened.',
+    icon: '🤝',
+    heading: 'A conversation starter for two strangers.',
+    body: 'Open Halfway when you meet someone new. It writes one question for each of you, then gives you one shared halfway point that makes it easier to keep the conversation going.',
+  },
+  {
+    icon: '⚡',
+    heading: 'Use it in the first five minutes.',
+    body: 'It is made for the moment right after hello: a table, event, cafe, line, or campus gathering. Instead of awkward small talk, it gives both of you a clear way in.',
   },
   {
     icon: '🌍',
-    heading: 'Where are you really from?',
-    body: 'Not the passport answer. The real one — the place that shaped how you see everything.',
+    heading: 'Start with questions that actually open people up.',
+    body: 'Not the passport answer. The real one — the place, memory, loss, belonging, and longing that shaped how someone sees the world.',
   },
   {
     icon: '💬',
-    heading: 'Both of you answer three questions.',
-    body: 'About what you\'ve lost. Where you belong. What you\'re still searching for. The same questions. Different answers.',
-    topics: ['🍂 Loss', '🌊 Belonging', '🌙 The Unknown'],
+    heading: 'Pick one topic and let Halfway write the opening.',
+    body: 'Choose from six topics like Loss, Belonging, Beauty, or Home. Halfway writes one question for each person around that same theme, so the conversation has a clear shape from the start.',
+    topics: ['🍂 Loss', '🌊 Belonging', '🏡 Home'],
   },
   {
     icon: '✦',
-    heading: 'AI finds what\'s between you.',
-    body: 'It reads all six answers and generates one question — the thing you both circled without either of you saying it. That\'s the halfway point.',
+    heading: 'Then it gives you one question to keep following.',
+    body: 'AI listens to both answers and finds the connecting point between you. That halfway point is what turns this from an icebreaker into a conversation you can keep having.',
   },
 ]
 

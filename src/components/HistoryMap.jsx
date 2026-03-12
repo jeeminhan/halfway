@@ -22,20 +22,20 @@ function FitBounds({ points }) {
   return null
 }
 
-export default function HistoryMap({ conversations }) {
+export default function HistoryMap({ items, activeId, onSelect, heightClass = 'h-[22rem]' }) {
   const [activeQuestion, setActiveQuestion] = useState(null)
 
-  const pins = conversations.map(convo => {
-    const ll1 = getLatLng(convo.person1?.country, convo.person1?.city)
-    const ll2 = getLatLng(convo.person2?.country, convo.person2?.city)
+  const pins = items.map(item => {
+    const ll1 = getLatLng(item.person1?.country, item.person1?.city)
+    const ll2 = getLatLng(item.person2?.country, item.person2?.city)
     if (!ll1 || !ll2) return null
-    return { convo, ll1, ll2, mid: midpoint(ll1, ll2) }
+    return { item, ll1, ll2, mid: midpoint(ll1, ll2) }
   }).filter(Boolean)
 
   const allPoints = pins.flatMap(p => [p.ll1, p.ll2])
 
   return (
-    <div className="h-48 w-full rounded-2xl overflow-hidden border border-sand/30">
+    <div className={`${heightClass} w-full rounded-3xl overflow-hidden border border-sand/30`}>
       <MapContainer
         center={[20, 0]}
         zoom={2}
@@ -47,34 +47,42 @@ export default function HistoryMap({ conversations }) {
           url={`https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg${import.meta.env.VITE_STADIA_MAPS_API_KEY ? `?api_key=${import.meta.env.VITE_STADIA_MAPS_API_KEY}` : ''}`}
         />
         {allPoints.length > 0 && <FitBounds points={allPoints} />}
-        {pins.map(({ convo, ll1, ll2, mid }) => (
-          <React.Fragment key={convo.id}>
+        {pins.map(({ item, ll1, ll2, mid }) => (
+          <React.Fragment key={item.id}>
             <Polyline
               positions={[[ll1.lat, ll1.lng], [ll2.lat, ll2.lng]]}
-              pathOptions={{ color: '#C4622D', weight: 1.5, opacity: 0.4, dashArray: '4 4' }}
+              pathOptions={{ color: activeId === item.id ? '#9B7653' : '#C4622D', weight: activeId === item.id ? 2.3 : 1.6, opacity: 0.55, dashArray: '4 4' }}
+              eventHandlers={{ click: () => onSelect?.(item.id) }}
             />
             <CircleMarker
               center={[ll1.lat, ll1.lng]}
-              radius={5}
-              pathOptions={{ fillColor: '#C4622D', fillOpacity: 0.8, color: '#C4622D', weight: 1 }}
+              radius={activeId === item.id ? 7 : 5}
+              pathOptions={{ fillColor: '#C4622D', fillOpacity: 0.8, color: '#C4622D', weight: activeId === item.id ? 2 : 1 }}
+              eventHandlers={{ click: () => onSelect?.(item.id) }}
             />
             <CircleMarker
               center={[ll2.lat, ll2.lng]}
-              radius={5}
-              pathOptions={{ fillColor: '#7A9E7E', fillOpacity: 0.8, color: '#7A9E7E', weight: 1 }}
+              radius={activeId === item.id ? 7 : 5}
+              pathOptions={{ fillColor: '#7A9E7E', fillOpacity: 0.8, color: '#7A9E7E', weight: activeId === item.id ? 2 : 1 }}
+              eventHandlers={{ click: () => onSelect?.(item.id) }}
             />
             <CircleMarker
               center={[mid.lat, mid.lng]}
-              radius={7}
+              radius={activeId === item.id ? 9 : 7}
               pathOptions={{ fillColor: '#D4A96A', fillOpacity: 0.9, color: '#9B7653', weight: 1.5 }}
-              eventHandlers={{ click: () => setActiveQuestion(activeQuestion === convo.id ? null : convo.id) }}
+              eventHandlers={{
+                click: () => {
+                  onSelect?.(item.id)
+                  setActiveQuestion(activeQuestion === item.id ? null : item.id)
+                },
+              }}
             >
-              {activeQuestion === convo.id && (
+              {activeQuestion === item.id && (
                 <Popup>
-                  <div className="max-w-[200px] text-center p-1">
-                    <p className="text-[10px] uppercase tracking-widest text-sand font-semibold mb-1">✦ Halfway</p>
+                  <div className="max-w-[220px] text-center p-1">
+                    <p className="text-[10px] uppercase tracking-widest text-sand font-semibold mb-1">✦ Shared Thread</p>
                     <p className="font-serif italic text-brown-deep text-xs leading-relaxed">
-                      "{convo.halfwayQuestion}"
+                      "{item.keepsake?.thread || item.halfwayQuestion}"
                     </p>
                   </div>
                 </Popup>
