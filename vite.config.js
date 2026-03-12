@@ -436,6 +436,55 @@ Return only the question. No preamble.
         }
       })
     })
+
+    server.middlewares.use('/api/generate-demo-conversation', async (req, res) => {
+      if (req.method !== 'POST') { res.statusCode = 405; res.end(); return }
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const { person1, person2, setting, topic } = JSON.parse(body)
+          const apiKey = process.env.GEMINI_API_KEY
+          if (!apiKey) throw new Error('No GEMINI_API_KEY in .env.local')
+
+          const genAI = new GoogleGenerativeAI(apiKey)
+          const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+          const prompt = `
+Generate a realistic, warm conversation between two people who just met. This is a demo conversation for an app called Halfway.
+
+Context:
+- Setting: ${setting || 'a quiet place'}
+- ${person1.name} is from ${[person1.city, person1.country].filter(Boolean).join(', ')}, occupation: ${person1.occupation || 'unknown'}
+- ${person2.name} is from ${[person2.city, person2.country].filter(Boolean).join(', ')}, occupation: ${person2.occupation || 'unknown'}
+- Topic: ${topic.name}
+- Question for ${person1.name}: ${topic.question1}
+- Question for ${person2.name}: ${topic.question2}
+
+Write a natural back-and-forth conversation (6-10 exchanges total) where each person answers their question and they find unexpected common ground. Include:
+- Culturally specific details from each person's background
+- Genuine emotional moments — not surface-level pleasantries
+- A moment where they realize they share something deeper than expected
+
+Format each line as:
+${person1.name}: [what they say]
+${person2.name}: [what they say]
+
+Keep it conversational and authentic — like two real people talking, not a scripted dialogue. About 200-300 words total.
+Return only the conversation text, no preamble or explanation.
+`
+          const result = await model.generateContent([{ text: prompt }])
+          const conversation = result.response.text().trim()
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ conversation }))
+        } catch (err) {
+          console.error('[Generate demo conversation dev error]', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'generation_failed', detail: err.message }))
+        }
+      })
+    })
   }
 })
 
