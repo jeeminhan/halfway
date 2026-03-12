@@ -3,8 +3,13 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Share2, Check } from 'lucide-react'
 
-export default function KeepsakeSummary({ keepsake, person1, person2, audioUrl, onClose }) {
+export default function KeepsakeSummary({ keepsake, topic, setting, person1, person2, audioUrl, onClose }) {
   const [copied, setCopied] = useState(false)
+  const [email1, setEmail1] = useState('')
+  const [email2, setEmail2] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [scheduledLabel, setScheduledLabel] = useState('')
+  const [showTranscript, setShowTranscript] = useState(false)
 
   const shareText = [keepsake.thread, keepsake.reflection].filter(Boolean).join('\n\n')
 
@@ -26,14 +31,56 @@ export default function KeepsakeSummary({ keepsake, person1, person2, audioUrl, 
     }
   }
 
-  const p1Label = [person1.city, person1.country].filter(Boolean)[0] || 'You'
-  const p2Label = [person2.city, person2.country].filter(Boolean)[0] || 'Them'
+  const handleSchedule = async () => {
+    const emails = [email1.trim(), email2.trim()].filter(Boolean)
+    if (emails.length === 0) {
+      onClose()
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/schedule-followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email1: email1.trim(),
+          email2: email2.trim(),
+          person1,
+          person2,
+          setting,
+          topic: topic ? {
+            id: topic.id,
+            name: topic.name,
+            question1: topic.question1,
+            question2: topic.question2,
+          } : null,
+          halfwayPoint: keepsake.thread,
+          reflection: keepsake.reflection,
+          continuePrompt: keepsake.continuePrompt,
+        }),
+      })
+
+      if (!res.ok) throw new Error('schedule_failed')
+      const data = await res.json()
+      setScheduledLabel(data.daysFromNow
+        ? `A follow-up question will arrive in about ${data.daysFromNow} days.`
+        : 'A follow-up question is on its way for next month.')
+    } catch {
+      setScheduledLabel('Could not schedule the email right now.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const p1Label = person1.name || [person1.city, person1.country].filter(Boolean)[0] || 'You'
+  const p2Label = person2.name || [person2.city, person2.country].filter(Boolean)[0] || 'Them'
 
   return (
     <div className="min-h-screen bg-parchment px-6 py-8 space-y-5">
       {/* Header */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brown-deep/35">Your Halfway</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-brown-deep/35">Your Halfway Point</p>
         <p className="font-serif text-sm text-brown-deep/50 mt-1">
           {p1Label} × {p2Label}
         </p>
@@ -50,35 +97,11 @@ export default function KeepsakeSummary({ keepsake, person1, person2, audioUrl, 
         <p className="font-serif italic text-brown-deep leading-relaxed">{keepsake.thread}</p>
       </motion.div>
 
-      {/* Two Windows */}
-      {(keepsake.person1Window || keepsake.person2Window) && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="space-y-2"
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/35">Two Windows</p>
-          {keepsake.person1Window && (
-            <div className="bg-paper-mid border border-sand/40 rounded-2xl p-4">
-              <p className="text-[10px] font-semibold text-terracotta mb-1">{p1Label}</p>
-              <p className="text-sm text-brown-deep/80 leading-relaxed">{keepsake.person1Window}</p>
-            </div>
-          )}
-          {keepsake.person2Window && (
-            <div className="bg-paper-mid border border-sand/40 rounded-2xl p-4">
-              <p className="text-[10px] font-semibold text-sage mb-1">{p2Label}</p>
-              <p className="text-sm text-brown-deep/80 leading-relaxed">{keepsake.person2Window}</p>
-            </div>
-          )}
-        </motion.div>
-      )}
-
       {/* Reflection */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.22 }}
         className="rounded-2xl p-5 bg-paper-mid border border-sand/40"
       >
         <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40 mb-3">A Closing Reflection</p>
@@ -90,7 +113,7 @@ export default function KeepsakeSummary({ keepsake, person1, person2, audioUrl, 
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.55 }}
+          transition={{ delay: 0.32 }}
           className="text-center px-4"
         >
           <p className="font-serif italic text-brown-deep/50 text-sm leading-relaxed">
@@ -99,15 +122,53 @@ export default function KeepsakeSummary({ keepsake, person1, person2, audioUrl, 
         </motion.div>
       )}
 
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="rounded-2xl p-5 bg-paper-mid border border-sand/40 space-y-3"
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40">
+          Get This By Email
+        </p>
+        <p className="text-sm text-brown-deep/65 leading-relaxed">
+          Leave one or both emails and Halfway will send this halfway point and reflection to your inbox. If it makes sense, a follow-up question may also arrive on its own next month.
+        </p>
+        <input
+          type="email"
+          value={email1}
+          onChange={(e) => setEmail1(e.target.value)}
+          placeholder={`${p1Label}'s email (optional)`}
+          className="w-full bg-parchment border border-sand/40 rounded-xl px-4 py-3 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none focus:border-terracotta text-sm"
+        />
+        <input
+          type="email"
+          value={email2}
+          onChange={(e) => setEmail2(e.target.value)}
+          placeholder={`${p2Label}'s email (optional)`}
+          className="w-full bg-parchment border border-sand/40 rounded-xl px-4 py-3 text-brown-deep placeholder:text-brown-deep/30 focus:outline-none focus:border-sage text-sm"
+        />
+        <button
+          onClick={handleSchedule}
+          disabled={submitting}
+          className="w-full border border-sand/40 bg-parchment py-3.5 rounded-2xl text-sm font-semibold text-brown-deep hover:bg-sand/10 transition-colors disabled:opacity-40"
+        >
+          {submitting ? 'Sending...' : 'Send this by email'}
+        </button>
+        {scheduledLabel && (
+          <p className="text-sm text-brown-deep/55 italic">{scheduledLabel}</p>
+        )}
+      </motion.div>
+
       {/* Audio Playback */}
       {audioUrl && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.48 }}
           className="rounded-2xl p-5 bg-paper-mid border border-sand/40 space-y-3"
         >
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40">Your Conversation</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40">Recording</p>
           <audio controls src={audioUrl} className="w-full h-10" />
           <a
             href={audioUrl}
@@ -119,11 +180,32 @@ export default function KeepsakeSummary({ keepsake, person1, person2, audioUrl, 
         </motion.div>
       )}
 
+      {/* Transcript */}
+      {keepsake.transcript && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.52 }}
+          className="rounded-2xl p-5 bg-paper-mid border border-sand/40 space-y-3"
+        >
+          <button
+            onClick={() => setShowTranscript(!showTranscript)}
+            className="w-full flex items-center justify-between"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-brown-deep/40">Transcript</p>
+            <span className="text-brown-deep/40 text-xs">{showTranscript ? '▲ Hide' : '▼ Show'}</span>
+          </button>
+          {showTranscript && (
+            <p className="text-sm text-brown-deep/70 leading-relaxed whitespace-pre-wrap">{keepsake.transcript}</p>
+          )}
+        </motion.div>
+      )}
+
       {/* Actions */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.65 }}
+        transition={{ delay: 0.56 }}
         className="flex gap-3 pb-8"
       >
         <button

@@ -1,10 +1,9 @@
 // src/components/EncounterFlow.jsx
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { drawTopics } from '../data/topics'
+import { topics as TOPIC_OPTIONS } from '../data/topics'
 import SettingPicker from './SettingPicker'
-import OccupationPicker from './OccupationPicker'
-import CountryPicker from './CountryPicker'
+import ProfileSetup from './ProfileSetup'
 import RecordingScreen from './RecordingScreen'
 import KeepsakeSummary from './KeepsakeSummary'
 
@@ -312,6 +311,8 @@ function getFacts(country) {
 function generateDemoQuestions(p1, p2, setting, drawnTopics) {
   const p1Place = p1.city || p1.country || 'your city'
   const p2Place = p2.city || p2.country || 'their city'
+  const p1Name = p1.name || p1Place
+  const p2Name = p2.name || p2Place
   const p1Occ = p1.occupation || 'person'
   const p2Occ = p2.occupation || 'person'
   const settingLabel = setting || 'this place'
@@ -320,35 +321,35 @@ function generateDemoQuestions(p1, p2, setting, drawnTopics) {
 
   const templates = {
     loss: {
-      question1: `As a ${p1Occ} from ${p1Place}, what part of ${p1Facts.ritual} still follows you around ${settingLabel} — not as nostalgia, but as a rhythm your body still waits for?`,
-      question2: `Growing up in ${p2Place} with ${p2Facts.sound} and the taste of ${p2Facts.food} — as a ${p2Occ}, what's the one sensory thing from home you'd give anything to walk into right now?`,
+      question1: `${p1Name}, as a ${p1Occ} from ${p1Place}, what part of ${p1Facts.ritual} still follows you around ${settingLabel} — not as nostalgia, but as a rhythm your body still waits for?`,
+      question2: `${p2Name}, growing up in ${p2Place} with ${p2Facts.sound} and the taste of ${p2Facts.food} — as a ${p2Occ}, what's the one sensory thing from home you'd give anything to walk into right now?`,
     },
     belonging: {
-      question1: `In ${p1Place}, where did you feel most like yourself — maybe somewhere like ${p1Facts.place}? Is there anywhere in ${settingLabel} that comes close?`,
-      question2: `As a ${p2Occ} far from ${p2Place}, when was the last time you felt completely at home — like when ${p2Facts.ritual} makes everyone exhale and stop performing?`,
+      question1: `${p1Name}, in ${p1Place}, where did you feel most like yourself — maybe somewhere like ${p1Facts.place}? Is there anywhere in ${settingLabel} that comes close?`,
+      question2: `${p2Name}, as a ${p2Occ} far from ${p2Place}, when was the last time you felt completely at home — like when ${p2Facts.ritual} makes everyone exhale and stop performing?`,
     },
     beauty: {
-      question1: `What's something beautiful in ${p1Place} that most people walk past without noticing — the kind of beauty you learned around ${p1Facts.place} as a ${p1Occ}?`,
-      question2: `In ${p2Place}, what still stops you in your tracks — a moment like ${p2Facts.place}, or even ${p2Facts.sound} that makes everything else go quiet?`,
+      question1: `${p1Name}, what's something beautiful in ${p1Place} that most people walk past without noticing — the kind of beauty you learned around ${p1Facts.place} as a ${p1Occ}?`,
+      question2: `${p2Name}, in ${p2Place}, what still stops you in your tracks — a moment like ${p2Facts.place}, or even ${p2Facts.sound} that makes everything else go quiet?`,
     },
     enough: {
-      question1: `As a ${p1Occ} from ${p1Place}, what would make your life feel complete — not successful, but complete, the way ${p1Facts.food} can feel like enough for one evening?`,
-      question2: `If you could stop translating yourself between ${p2Place} and here, between being a ${p2Occ} and being yourself, and just rest in ${p2Facts.ritual} again — what would that feel like?`,
+      question1: `${p1Name}, as a ${p1Occ} from ${p1Place}, what would make your life feel complete — not successful, but complete, the way ${p1Facts.food} can feel like enough for one evening?`,
+      question2: `${p2Name}, if you could stop translating yourself between ${p2Place} and here, between being a ${p2Occ} and being yourself, and just rest in ${p2Facts.ritual} again — what would that feel like?`,
     },
     home: {
-      question1: `When someone in ${settingLabel} asks "where are you from?" — do you say ${p1Place}, or do you answer with things like ${p1Facts.food} and ${p1Facts.place} instead?`,
-      question2: `Is ${p2Place} still home, or is home something you're still looking for? Would home need ${p2Facts.sound}, ${p2Facts.food}, or something even deeper to make you stop searching?`,
+      question1: `${p1Name}, when someone in ${settingLabel} asks "where are you from?" — do you say ${p1Place}, or do you answer with things like ${p1Facts.food} and ${p1Facts.place} instead?`,
+      question2: `${p2Name}, is ${p2Place} still home, or is home something you're still looking for? Would home need ${p2Facts.sound}, ${p2Facts.food}, or something even deeper to make you stop searching?`,
     },
     unknown: {
-      question1: `As a ${p1Occ} who left ${p1Place}, what are you still searching for that no city, no degree, no achievement has been able to give you — maybe something you only felt in moments like ${p1Facts.ritual}?`,
-      question2: `What would it mean to be fully known — not just your ${p2Occ} self here, but the ${p2Place} version shaped by ${p2Facts.place} and ${p2Facts.sound} too — by someone who isn't going anywhere?`,
+      question1: `${p1Name}, as a ${p1Occ} who left ${p1Place}, what are you still searching for that no city, no degree, no achievement has been able to give you — maybe something you only felt in moments like ${p1Facts.ritual}?`,
+      question2: `${p2Name}, what would it mean to be fully known — not just your ${p2Occ} self here, but the ${p2Place} version shaped by ${p2Facts.place} and ${p2Facts.sound} too — by someone who isn't going anywhere?`,
     },
   }
 
   return drawnTopics.map(t => {
     const tmpl = templates[t.id] || {
-      question1: `What's something about life in ${p1Place} as a ${p1Occ} that you wish people here understood — maybe hidden in ${p1Facts.food} or ${p1Facts.sound}?`,
-      question2: `What's something about ${p2Place} that you carry with you everywhere — something a ${p2Occ} from there just never loses, like ${p2Facts.ritual}?`,
+      question1: `${p1Name}, what's something about life in ${p1Place} as a ${p1Occ} that you wish people here understood — maybe hidden in ${p1Facts.food} or ${p1Facts.sound}?`,
+      question2: `${p2Name}, what's something about ${p2Place} that you carry with you everywhere — something a ${p2Occ} from there just never loses, like ${p2Facts.ritual}?`,
     }
     return { ...t, question1: tmpl.question1, question2: tmpl.question2 }
   })
@@ -358,12 +359,14 @@ function generateDemoQuestions(p1, p2, setting, drawnTopics) {
 function generateDemoKeepsake(p1, p2, setting) {
   const p1Place = p1.city || p1.country || 'your city'
   const p2Place = p2.city || p2.country || 'their city'
+  const p1Name = p1.name || p1Place
+  const p2Name = p2.name || p2Place
   const p1Facts = getFacts(p1.country)
   const p2Facts = getFacts(p2.country)
   return {
-    thread: `Both of you — one from ${p1Place} with ${p1Facts.sound} in your memory, one from ${p2Place} carrying ${p2Facts.ritual} in your body — are holding the same quiet hunger: to be fully known, in a place that feels like home, by someone who isn't going anywhere.`,
-    person1Window: `${p2Place} isn't just a place on a map — it's ${p2Facts.food}, it's ${p2Facts.sound}, it's a version of home that still shows up in their voice even far from ${p2Facts.place}.`,
-    person2Window: `${p1Place} shaped something deeper than culture — from ${p1Facts.ritual} to ${p1Facts.food}, it taught them to notice beauty in small moments and to keep longing for something lasting.`,
+    thread: `Both of you — ${p1Name} from ${p1Place}, ${p2Name} from ${p2Place} — are holding the same quiet hunger: to be fully known, in a place that feels like home, by someone who isn't going anywhere.`,
+    person1Window: `${p2Name}'s world in ${p2Place} isn't just a place on a map — it's ${p2Facts.food}, it's ${p2Facts.sound}, it's a version of home that still shows up in their voice even far from ${p2Facts.place}.`,
+    person2Window: `${p1Name}'s life in ${p1Place} was shaped by more than culture — from ${p1Facts.ritual} to ${p1Facts.food}, it taught them to notice beauty in small moments and to keep longing for something lasting.`,
     reflection: `You met in ${setting || 'a place'} you'll both eventually leave. But what you shared — that hunger to be known completely, to belong somewhere permanent — that's not going anywhere. What if there's a Person who already knows both versions of you, the ${p1Place} one and the one sitting here, and isn't planning on leaving?`,
     continuePrompt: `Exchange numbers. This conversation isn't done yet.`,
   }
@@ -372,16 +375,18 @@ function generateDemoKeepsake(p1, p2, setting) {
 export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, onClose }) {
   const [step, setStep] = useState('setting')
   const [setting, setSetting] = useState(null)
-  const [person1, setPerson1] = useState(initialPerson1 || { city: '', country: '', occupation: '' })
-  const [person2, setPerson2] = useState(initialPerson2 || { city: '', country: '', occupation: '' })
-  const [topics] = useState(() => drawTopics(3))
-  const [enrichedTopics, setEnrichedTopics] = useState(null)
+  const [person1] = useState(initialPerson1 || { name: '', city: '', country: '', occupation: '' })
+  const [person2, setPerson2] = useState(initialPerson2 || { name: '', city: '', country: '', occupation: '' })
+  const [selectedTopic, setSelectedTopic] = useState(null)
+  const [activeTopic, setActiveTopic] = useState(null)
   const [keepsake, setKeepsake] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
+  const [topicError, setTopicError] = useState('')
+  const [processingError, setProcessingError] = useState('')
+  const [pendingRecordingData, setPendingRecordingData] = useState(null)
 
-  const displayTopics = enrichedTopics || topics
-
-  const handleGenerateTopics = async (p1, p2, s, drawnTopics) => {
+  const handleGenerateTopicQuestions = async (p1, p2, s, topic) => {
+    setTopicError('')
     setStep('loading-topics')
     try {
       const controller = new AbortController()
@@ -391,57 +396,52 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
+          person1Name: p1.name,
           person1City: p1.city,
           person1Country: p1.country,
           person1Occupation: p1.occupation,
+          person2Name: p2.name,
           person2City: p2.city,
           person2Country: p2.country,
           person2Occupation: p2.occupation,
           setting: s,
-          topics: drawnTopics.map(t => ({ id: t.id, name: t.name })),
+          topics: [{ id: topic.id, name: topic.name }],
         }),
       })
       clearTimeout(timeout)
+      if (!res.ok) throw new Error('generation_failed')
       const data = await res.json()
-      if (data.questions && data.questions.length >= 3) {
-        const enriched = drawnTopics.map(t => {
-          const found = data.questions.find(q => q.id === t.id)
-          return found ? { ...t, question1: found.question1, question2: found.question2 } : t
+      if (data.questions?.length) {
+        const generated = data.questions[0]
+        if (!generated?.question1 || !generated?.question2) throw new Error('Incomplete questions')
+        setActiveTopic({
+          ...topic,
+          question1: generated.question1,
+          question2: generated.question2,
         })
-        setEnrichedTopics(enriched)
       } else {
         throw new Error('Insufficient questions')
       }
     } catch {
-      // API unavailable — use client-side contextual demo questions
-      const demoTopics = generateDemoQuestions(p1, p2, s, drawnTopics)
-      setEnrichedTopics(demoTopics)
+      setActiveTopic(null)
+      setSelectedTopic(null)
+      setTopicError('Could not reach Gemini to write the opening questions. Check your API setup and try again.')
+      setStep('topic')
+      return
     }
     setStep('recording')
   }
 
-  const handleRecordingFinish = async (recordingData) => {
-    if (recordingData.discard) {
-      setEnrichedTopics(null)
-      setStep('who-them-occupation')
-      return
-    }
-
-    // Save audio locally if available
-    if (recordingData.audioBlob) {
-      const url = URL.createObjectURL(recordingData.audioBlob)
-      setAudioUrl(url)
-    }
-
-    setStep('processing')
-
+  const processConversation = async (recordingData) => {
+    setProcessingError('')
     const save = (k) => {
       onSave({
         id: `convo-${Date.now()}`,
         person1,
         person2,
         setting,
-        topics: displayTopics,
+        topic: activeTopic,
+        topics: activeTopic ? [activeTopic] : [],
         keepsake: k,
         createdAt: new Date().toISOString(),
       })
@@ -461,11 +461,13 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
           audioMimeType: recordingData.audioMimeType,
           transcript: recordingData.transcript,
           setting,
-          person1: { city: person1.city, country: person1.country, occupation: person1.occupation },
-          person2: { city: person2.city, country: person2.country, occupation: person2.occupation },
+          topic: activeTopic ? { id: activeTopic.id, name: activeTopic.name, question1: activeTopic.question1, question2: activeTopic.question2 } : null,
+          person1: { name: person1.name, city: person1.city, country: person1.country, occupation: person1.occupation },
+          person2: { name: person2.name, city: person2.city, country: person2.country, occupation: person2.occupation },
         }),
       })
       clearTimeout(timeout)
+      if (!res.ok) throw new Error('generation_failed')
       const data = await res.json()
       if (!data.thread) throw new Error('Invalid response')
       return data
@@ -477,10 +479,29 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
       try {
         save(await attempt())
       } catch {
-        // API unavailable — use contextual demo keepsake
-        save(generateDemoKeepsake(person1, person2, setting))
+        setProcessingError('Could not reach Gemini to create the halfway point. Retry when the API is available.')
+        setStep('processing-error')
       }
     }
+  }
+
+  const handleRecordingFinish = async (recordingData) => {
+    if (recordingData.discard) {
+      setActiveTopic(null)
+      setSelectedTopic(null)
+      setPendingRecordingData(null)
+      setStep('topic')
+      return
+    }
+
+    if (recordingData.audioBlob) {
+      const url = URL.createObjectURL(recordingData.audioBlob)
+      setAudioUrl(url)
+    }
+
+    setPendingRecordingData(recordingData)
+    setStep('processing')
+    await processConversation(recordingData)
   }
 
   const loadingDots = (
@@ -496,80 +517,105 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
         ))}
       </div>
       <p className="font-serif italic text-brown-deep/40 text-sm">
-        {step === 'loading-topics' ? 'Reading your worlds…' : 'Finding your halfway point…'}
+        {step === 'loading-topics' ? 'Writing your first two questions…' : 'Finding your halfway point…'}
       </p>
     </div>
   )
 
+  const showHeader = step !== 'recording'
+
   return (
     <div className="h-screen bg-parchment flex flex-col overflow-hidden">
+      {showHeader && (
+        <div className="shrink-0 flex items-center px-6 py-3">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 hover:opacity-70 transition-opacity"
+          >
+            <span className="font-serif text-xl font-bold text-brown-deep">Halfway</span>
+          </button>
+        </div>
+      )}
       <AnimatePresence mode="wait">
         {step === 'setting' && (
           <motion.div key="setting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1">
-            <SettingPicker onConfirm={(s) => { setSetting(s); setStep('who-you') }} />
-          </motion.div>
-        )}
-
-        {step === 'who-you' && (
-          <motion.div key="who-you" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col min-h-0">
-            <CountryPicker
-              label="You"
-              accentColor="terracotta"
-              initialCountry={initialPerson1?.country}
-              initialCity={initialPerson1?.city}
-              locked={!!initialPerson1?.isDemo}
-              onConfirm={(data) => {
-                setPerson1(p => ({ ...p, country: data.country, city: data.city }))
-                setStep('who-you-occupation')
-              }}
-            />
-          </motion.div>
-        )}
-
-        {step === 'who-you-occupation' && (
-          <motion.div key="who-you-occupation" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
-            <OccupationPicker
-              label={person1.city || person1.country || 'you'}
-              accentColor="terracotta"
-              onConfirm={(occ) => {
-                setPerson1(p => ({ ...p, occupation: occ }))
-                setStep('who-them')
-              }}
-            />
+            <SettingPicker onConfirm={(s) => { setSetting(s); setStep('who-them') }} />
           </motion.div>
         )}
 
         {step === 'who-them' && (
           <motion.div key="who-them" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col min-h-0">
-            <CountryPicker
-              label="Them"
+            <ProfileSetup
+              initialProfile={person2}
+              heading="Tell us about them"
+              subtitle="Use the same one-screen setup you used for yourself, so the conversation can begin without extra steps."
               accentColor="sage"
-              secondaryCountry={person1.country}
-              secondaryCity={person1.city}
-              onConfirm={(data) => {
-                setPerson2(p => ({ ...p, country: data.country, city: data.city }))
-                setStep('who-them-occupation')
-              }}
-              onSkip={initialPerson2 ? undefined : () => {
-                const demo = { country: 'Canada', city: 'Toronto', occupation: 'student', isDemo: true }
+              namePlaceholder="Their first name"
+              occupationPlaceholder="What do they do? (e.g. grad student, nurse, software engineer)"
+              countryHint="Tap the map or search for their country."
+              submitLabel="Continue →"
+              secondaryActionLabel={initialPerson2 ? undefined : 'Try with an example person →'}
+              onSecondaryAction={initialPerson2 ? undefined : () => {
+                const demo = { name: 'Sarah', country: 'Canada', city: 'Toronto', occupation: 'student', isDemo: true }
                 setPerson2(demo)
-                handleGenerateTopics(person1, demo, setting, topics)
+                setStep('topic')
+              }}
+              onDone={(profile) => {
+                const p2 = { ...person2, ...profile }
+                setPerson2(p2)
+                setStep('topic')
               }}
             />
           </motion.div>
         )}
 
-        {step === 'who-them-occupation' && (
-          <motion.div key="who-them-occupation" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1">
-            <OccupationPicker
-              label={person2.city || person2.country || 'them'}
-              accentColor="sage"
-              onConfirm={(occ) => {
-                const p2 = { ...person2, occupation: occ }
-                setPerson2(p2)
-                handleGenerateTopics(person1, p2, setting, topics)
-              }}
-            />
+        {step === 'topic' && (
+          <motion.div key="topic" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 overflow-y-auto">
+            <div className="min-h-screen bg-parchment px-6 py-10 space-y-6 max-w-3xl mx-auto">
+              <div className="space-y-2">
+                <h1 className="font-serif text-3xl md:text-4xl font-bold text-brown-deep">
+                  Pick one topic to open the conversation
+                </h1>
+                <p className="text-brown-deep/55 text-sm md:text-base italic max-w-xl">
+                  Halfway will write one question for {person1.name || 'you'} and one for {person2.name || 'them'} around the same topic, then listen for the thread between your answers.
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                {TOPIC_OPTIONS.map((topic) => (
+                  <button
+                    key={topic.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTopic(topic.id)
+                      handleGenerateTopicQuestions(person1, person2, setting, topic)
+                    }}
+                    className="w-full text-left rounded-2xl border p-5 transition-transform hover:-translate-y-0.5"
+                    style={{
+                      background: `linear-gradient(135deg, ${topic.color}14 0%, #EDE5D0 65%)`,
+                      borderColor: `${topic.color}30`,
+                    }}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-2xl">{topic.icon}</span>
+                      <div>
+                        <p className="font-serif text-xl font-bold text-brown-deep">{topic.name}</p>
+                        <p className="text-xs uppercase tracking-[0.24em] text-brown-deep/35">One shared starting point</p>
+                      </div>
+                    </div>
+                    <p className="font-serif italic text-brown-deep/70 leading-relaxed">{topic.question}</p>
+                    {selectedTopic === topic.id && (
+                      <p className="text-sm text-brown-deep/50 mt-3">Writing your questions…</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {topicError && (
+                <div className="rounded-2xl border border-terracotta/20 bg-terracotta/10 px-4 py-3 text-sm text-brown-deep/75">
+                  {topicError}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -579,10 +625,37 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
           </motion.div>
         )}
 
+        {step === 'processing-error' && (
+          <motion.div key="processing-error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center px-6 text-center space-y-5">
+            <div className="max-w-md space-y-3">
+              <h2 className="font-serif text-3xl font-bold text-brown-deep">Gemini did not return a halfway point.</h2>
+              <p className="text-brown-deep/60 leading-relaxed">
+                {processingError}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (!pendingRecordingData) return
+                setStep('processing')
+                processConversation(pendingRecordingData)
+              }}
+              className="w-full max-w-sm bg-brown-deep text-parchment py-4 rounded-2xl font-semibold hover:bg-brown-deep/90 transition-colors"
+            >
+              Retry with Gemini
+            </button>
+            <button
+              onClick={() => setStep('recording')}
+              className="text-brown-deep/45 text-sm hover:text-brown-deep/70 transition-colors"
+            >
+              Back to recording
+            </button>
+          </motion.div>
+        )}
+
         {step === 'recording' && (
           <motion.div key="recording" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
             <RecordingScreen
-              topics={displayTopics}
+              topic={activeTopic}
               person1={person1}
               person2={person2}
               onFinish={handleRecordingFinish}
@@ -595,6 +668,8 @@ export default function EncounterFlow({ initialPerson1, initialPerson2, onSave, 
           <motion.div key="keepsake" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 overflow-y-auto">
             <KeepsakeSummary
               keepsake={keepsake}
+              topic={activeTopic}
+              setting={setting}
               person1={person1}
               person2={person2}
               audioUrl={audioUrl}
