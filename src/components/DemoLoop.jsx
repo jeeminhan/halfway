@@ -1,109 +1,13 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-
-const DEMO_STEPS = [
-  { type: 'cities', content: 'Seoul · Toronto' },
-  { type: 'topic', icon: '🍂', name: 'Loss', question: 'What have you left behind that still travels with you?' },
-  { type: 'answer1', text: '"Hotpot with my mom — I haven\'t found anything like it here"' },
-  { type: 'answer2', text: '"The feeling of walking into my home church on a Sunday morning"' },
-  { type: 'halfway', text: 'What if the hotpot and the Sunday morning are actually the same hunger — and neither of them is really what you\'re looking for?' },
-]
-
-const STEP_DURATIONS = [1800, 2400, 2800, 2800, 4500]
-const STEP_BLOOMS = [
-  'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(212, 169, 106, 0.1) 0%, transparent 72%)',
-  'radial-gradient(ellipse 70% 50% at 50% 45%, rgba(196, 98, 45, 0.1) 0%, transparent 72%)',
-  'radial-gradient(ellipse 80% 55% at 40% 48%, rgba(196, 98, 45, 0.08) 0%, transparent 72%)',
-  'radial-gradient(ellipse 80% 55% at 60% 48%, rgba(122, 158, 126, 0.1) 0%, transparent 72%)',
-  'radial-gradient(ellipse 80% 60% at 50% 45%, rgba(212, 169, 106, 0.12) 0%, transparent 72%)',
-]
+import React from 'react'
+import { motion } from 'framer-motion'
 
 export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, onSettings, savedPerson1 }) {
-  const [step, setStep] = useState(0)
-
-  useEffect(() => {
-    const duration = STEP_DURATIONS[step] ?? 2000
-    const timer = setTimeout(() => {
-      setStep(s => (s + 1) % DEMO_STEPS.length)
-    }, duration)
-    return () => clearTimeout(timer)
-  }, [step])
-
   const handleStart = () => {
     onStart(savedPerson1)
   }
 
-  const current = DEMO_STEPS[step]
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between px-6 py-16 max-w-md mx-auto">
-      {/* Demo area */}
-      <div className="relative flex-1 flex flex-col items-center justify-center w-full">
-        <div className="w-full text-center mb-8 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-terracotta/70">
-            What This Is
-          </p>
-          <p className="font-serif italic text-brown-deep/45 text-sm leading-relaxed max-w-xs mx-auto">
-            A conversation starter for two strangers who want to get past small talk quickly.
-          </p>
-        </div>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`bloom-${step}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7 }}
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: STEP_BLOOMS[step] }}
-          />
-        </AnimatePresence>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.5 }}
-            className="text-center w-full relative"
-          >
-            {current.type === 'cities' && (
-              <p className="font-serif text-2xl text-brown-deep/40 tracking-wide">
-                {current.content}
-              </p>
-            )}
-            {current.type === 'topic' && (
-              <div className="ink-card wash-sand p-6 text-center border border-sand/30">
-                <p className="text-4xl mb-3">{current.icon}</p>
-                <p className="font-serif text-xl font-bold text-brown-deep mb-2">{current.name}</p>
-                <p className="font-serif italic text-brown-deep/60 text-base leading-relaxed">
-                  {current.question}
-                </p>
-              </div>
-            )}
-            {current.type === 'answer1' && (
-              <div className="ink-card wash-terracotta p-4 text-left border border-terracotta/20">
-                <p className="text-[10px] uppercase tracking-widest text-terracotta/60 mb-2 font-semibold">Seoul</p>
-                <p className="font-serif italic text-brown-deep/80 text-base leading-relaxed">{current.text}</p>
-              </div>
-            )}
-            {current.type === 'answer2' && (
-              <div className="ink-card wash-sage p-4 text-left border border-sage/20">
-                <p className="text-[10px] uppercase tracking-widest text-sage/70 mb-2 font-semibold">Toronto</p>
-                <p className="font-serif italic text-brown-deep/80 text-base leading-relaxed">{current.text}</p>
-              </div>
-            )}
-            {current.type === 'halfway' && (
-              <div className="space-y-4 py-4">
-                <div className="w-8 h-px bg-terracotta/40 mx-auto" />
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-sand">✦ Halfway Question</p>
-                <p className="font-serif italic text-brown-deep text-xl leading-relaxed">"{current.text}"</p>
-                <p className="text-[10px] text-brown-deep/30 uppercase tracking-widest">Generated by AI</p>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-end px-6 py-16 max-w-md mx-auto">
 
       {/* Brand + CTA */}
       <div className="w-full space-y-5 text-center">
@@ -111,6 +15,15 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, onSet
           <h1 className="font-serif text-5xl font-bold text-brown-deep">Halfway</h1>
           <p className="text-brown-deep/40 mt-2 text-sm italic font-serif">
             For meeting someone new and finding a real thread to keep talking.
+          </p>
+        </div>
+
+        <div className="text-left rounded-2xl border border-terracotta/20 bg-terracotta/8 p-4 space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-terracotta/70">
+            Best time to use it
+          </p>
+          <p className="text-sm text-brown-deep/75 leading-relaxed">
+            Open Halfway in the first few minutes after hello: at a cafe, after class, during an event, in line, or whenever you want to move past polite small talk quickly.
           </p>
         </div>
 
@@ -126,7 +39,7 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, onSet
         </div>
 
         {savedPerson1 && (
-          <div className="text-left space-y-1 bg-paper-mid border border-sand/30 rounded-2xl p-4">
+          <div className="text-left space-y-2 bg-paper-mid border border-sand/30 rounded-2xl p-4">
             <div className="flex items-center justify-between">
               <p className="font-serif font-bold text-brown-deep text-base">{savedPerson1.name}</p>
               <button onClick={onSettings} className="text-xs text-brown-deep/40 hover:text-terracotta transition-colors">
@@ -136,6 +49,9 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, onSet
             <p className="text-sm text-brown-deep/60">
               {savedPerson1.city ? `${savedPerson1.city}, ` : ''}{savedPerson1.country}
               {savedPerson1.occupation ? ` · ${savedPerson1.occupation}` : ''}
+            </p>
+            <p className="text-sm text-brown-deep/50 leading-relaxed">
+              Your side is ready. When you meet someone new, open Halfway and let it write the opening.
             </p>
           </div>
         )}
@@ -148,6 +64,9 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, onSet
           >
             Start the Conversation
           </button>
+          <p className="text-xs text-brown-deep/35 italic">
+            This is for a real interaction, not just browsing the concept.
+          </p>
 
           <motion.button
             onClick={onDemo}
@@ -168,7 +87,7 @@ export default function DemoLoop({ hasHistory, onStart, onHistory, onDemo, onSet
             >
               ›
             </motion.span>
-            <span>See the demo flow</span>
+            <span>See a solo demo first</span>
             <motion.span
               animate={{ x: [0, -4, 0] }}
               transition={{ duration: 1, repeat: Infinity }}

@@ -30,7 +30,13 @@ const SLIDES = [
   },
 ]
 
-export default function OnboardingScreen({ onDone }) {
+const NEXT_STEPS = [
+  'Set up your side once',
+  'Open it with someone new',
+  'Leave with one thread worth continuing',
+]
+
+export default function OnboardingScreen({ hasProfile, onDone }) {
   const [slide, setSlide] = useState(0)
   const isLast = slide === SLIDES.length - 1
 
@@ -47,6 +53,24 @@ export default function OnboardingScreen({ onDone }) {
   return (
     <div className="min-h-screen bg-parchment flex flex-col items-center justify-between px-6 py-16 max-w-md mx-auto">
       <div className="flex-1 flex flex-col items-center justify-center w-full space-y-8">
+        <div className="w-full space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-terracotta/70 text-center">
+            First-use walkthrough
+          </p>
+          <div className="rounded-2xl bg-paper-mid border border-sand/30 p-4 space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-brown-deep/45">
+              What happens next
+            </p>
+            <div className="space-y-1 text-sm text-brown-deep/70 leading-relaxed">
+              {NEXT_STEPS.map((stepText, index) => (
+                <p key={stepText}>
+                  <span className="font-semibold text-brown-deep">{index + 1}.</span> {stepText}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <AnimatePresence mode="wait">
           <motion.div
             key={slide}
@@ -94,7 +118,7 @@ export default function OnboardingScreen({ onDone }) {
           onClick={handleNext}
           className="w-full bg-brown-deep text-parchment py-4 rounded-2xl font-semibold text-base hover:bg-brown-deep/90 transition-colors"
         >
-          {isLast ? 'Start a Conversation' : 'Continue →'}
+          {isLast ? (hasProfile ? 'Go to Home' : 'Set Up My Side →') : 'Continue →'}
         </button>
 
         {!isLast && (
@@ -102,7 +126,7 @@ export default function OnboardingScreen({ onDone }) {
             onClick={onDone}
             className="w-full text-brown-deep/30 text-sm hover:text-brown-deep/50 transition-colors"
           >
-            Skip intro
+            {hasProfile ? 'Skip to home' : 'Skip to setup'}
           </button>
         )}
       </div>

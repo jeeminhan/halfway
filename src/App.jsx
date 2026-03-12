@@ -7,6 +7,7 @@ import OnboardingScreen from './components/OnboardingScreen'
 import ProfileSetup from './components/ProfileSetup'
 
 const STORAGE_KEY = 'halfway-conversations'
+const ONBOARDED_KEY = 'halfway-onboarded'
 
 function loadConversations() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [] }
@@ -30,8 +31,6 @@ function normalizePersonProfile(profile) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('onboarding')
-  const [conversations, setConversations] = useState(loadConversations)
   const [person1, setPerson1] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('halfway-person1'))
@@ -39,6 +38,17 @@ export default function App() {
     }
     catch { return null }
   })
+  const [screen, setScreen] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('halfway-person1'))
+      const hasProfile = Boolean(normalizePersonProfile(saved)?.country)
+      const hasOnboarded = localStorage.getItem(ONBOARDED_KEY) === 'true'
+      return hasProfile && hasOnboarded ? 'home' : 'onboarding'
+    } catch {
+      return 'onboarding'
+    }
+  })
+  const [conversations, setConversations] = useState(loadConversations)
   const [person2, setPerson2] = useState(null)
 
   const handleSave = (convo) => {
@@ -50,7 +60,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-parchment">
       {screen === 'onboarding' && (
-        <OnboardingScreen onDone={() => setScreen(person1 ? 'home' : 'profile-setup')} />
+        <OnboardingScreen
+          hasProfile={Boolean(person1?.country)}
+          onDone={() => {
+            localStorage.setItem(ONBOARDED_KEY, 'true')
+            setScreen(person1 ? 'home' : 'profile-setup')
+          }}
+        />
       )}
       {screen === 'profile-setup' && (
         <ProfileSetup
@@ -58,6 +74,7 @@ export default function App() {
             const normalizedProfile = normalizePersonProfile(profile)
             setPerson1(normalizedProfile)
             localStorage.setItem('halfway-person1', JSON.stringify(normalizedProfile))
+            localStorage.setItem(ONBOARDED_KEY, 'true')
             setScreen('home')
           }}
         />
@@ -102,6 +119,7 @@ export default function App() {
             const normalizedProfile = normalizePersonProfile(profile)
             setPerson1(normalizedProfile)
             localStorage.setItem('halfway-person1', JSON.stringify(normalizedProfile))
+            localStorage.setItem(ONBOARDED_KEY, 'true')
             setScreen('home')
           }}
         />
