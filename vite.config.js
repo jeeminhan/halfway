@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { Resend } from 'resend'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -160,8 +161,9 @@ Return only the question. No preamble, no explanation.
       req.on('end', async () => {
         try {
           const {
-            person1City, person1Country,
-            person2City, person2Country,
+            person1City, person1Country, person1Occupation,
+            person2City, person2Country, person2Occupation,
+            setting,
             topics,
           } = JSON.parse(body)
           const apiKey = process.env.GEMINI_API_KEY
@@ -171,29 +173,37 @@ Return only the question. No preamble, no explanation.
           const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
           const prompt = `
-You are generating conversation questions for two people who just met:
-- Person 1 is from ${person1City}${person1Country ? ', ' + person1Country : ''}
-- Person 2 is from ${person2City}${person2Country ? ', ' + person2Country : ''}
+You are generating conversation questions for two people who just met.
 
-Generate one question for each of these ${topics.length} topics: ${topics.map(t => t.name).join(', ')}
+Context:
+- Setting: ${setting || 'unknown'}
+- Person 1 is from ${person1City || ''}${person1Country ? ', ' + person1Country : ''}, occupation: ${person1Occupation || 'unknown'}
+- Person 2 is from ${person2City || ''}${person2Country ? ', ' + person2Country : ''}, occupation: ${person2Occupation || 'unknown'}
+
+Generate TWO directional questions for each of these ${topics.length} topics: ${topics.map(t => t.name).join(', ')}
+
+For each topic:
+- question1: Asked TO Person 1 (from ${person1City || person1Country}). Invites them to share something about their world that helps Person 2 understand it better.
+- question2: Asked TO Person 2 (from ${person2City || person2Country}). Invites them to share something about their world that helps Person 1 understand it better.
 
 For each question:
-- Reference something culturally specific to BOTH cities — an actual place, tradition, food, ritual, season, or social norm that exists in those cultures
-- Frame it so both people can answer from their own world — it should feel like genuine curiosity between two people from different places
-- Have philosophical depth underneath — the surface is cultural, the underneath is about meaning, loss, belonging, or identity
-- Be a single conversational question, not an interview prompt
-- Feel warm and specific — "In Seoul, ___" or "Growing up in Toronto, ___" is better than "In your culture, ___"
+- Reference something culturally specific to that person's city/country — an actual place, tradition, food, ritual, or social norm
+- Frame it with warmth and specificity — "Growing up in Lagos..." or "In Seoul..." not "In your culture..."
+- Let the surface be cultural but the underneath probe toward: longing, permanence, being fully known, or something that never leaves
+- Reflect their occupation and setting naturally — a student at a campus asks differently than a professional in an office
+- Be a single conversational question (not an interview prompt)
 
-Return a JSON array with exactly ${topics.length} objects, one per topic, in the same order as the topics list:
+Return a JSON array with exactly ${topics.length} objects:
 [
-  { "id": "topic-id", "question": "the question text" },
+  { "id": "topic-id", "question1": "...", "question2": "..." },
   ...
 ]
 Return only the JSON array. No preamble, no markdown code fences.
 `
           const result = await model.generateContent([{ text: prompt }])
           const text = result.response.text().trim()
-          const questions = JSON.parse(text)
+          const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+          const questions = JSON.parse(cleaned)
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ questions }))
         } catch (err) {
@@ -201,6 +211,228 @@ Return only the JSON array. No preamble, no markdown code fences.
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: 'generation_failed', detail: err.message }))
+        }
+      })
+    })
+
+    server.middlewares.use('/api/summarize-conversation', async (req, res) => {
+      if (req.method !== 'POST') { res.statusCode = 405; res.end(); return }
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const {
+            audioBase64,
+            audioMimeType,
+            transcript,
+            setting,
+            topic,
+            person1,
+            person2,
+          } = JSON.parse(body)
+          const apiKey = process.env.GEMINI_API_KEY
+          if (!apiKey) throw new Error('No GEMINI_API_KEY in .env.local')
+
+          const genAI = new GoogleGenerativeAI(apiKey)
+          const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+          const context = [
+            `Setting: ${setting || 'unknown'}`,
+            `Topic: ${topic?.name || 'unknown'}`,
+            `Person 1 is from ${[person1?.city, person1?.country].filter(Boolean).join(', ')}, occupation: ${person1?.occupation || 'unknown'}`,
+            `Person 2 is from ${[person2?.city, person2?.country].filter(Boolean).join(', ')}, occupation: ${person2?.occupation || 'unknown'}`,
+            topic?.question1 ? `Question to Person 1: ${topic.question1}` : null,
+            topic?.question2 ? `Question to Person 2: ${topic.question2}` : null,
+          ].join('\n')
+
+          const outputInstructions = `
+From this conversation, generate a keepsake JSON object with exactly these fields:
+
+- "thread": The ONE specific connecting point — the halfway point — where their two answers touched. Name it using their actual words. 1-2 sentences. Specific, not abstract. If no clear shared thread, create a poetic bridge between the closest things they mentioned.
+- "person1Answer": A concise 1-2 sentence rendering of what Person 1 actually shared in response to the topic. Preserve the emotional specifics and concrete details they mentioned.
+- "person2Answer": A concise 1-2 sentence rendering of what Person 2 actually shared in response to the topic. Preserve the emotional specifics and concrete details they mentioned.
+- "person1Window": One beautiful insight Person 2 now has about ${[person1?.city, person1?.country].filter(Boolean).join(', ')}'s world. What did they learn? 1-2 sentences, specific.
+- "person2Window": One beautiful insight Person 1 now has about ${[person2?.city, person2?.country].filter(Boolean).join(', ')}'s world. 1-2 sentences, specific.
+- "reflection": A short poetic closing (3-5 sentences). Name the longing underneath what they shared — the thing that both their answers were quietly reaching toward. Then quietly point toward a Person — not a place, not a feeling, not a memory — who could meet that hunger fully and permanently. Be specific to what they actually said. Warm and honest, not preachy.
+- "continuePrompt": A single warm, human next-step suggestion (1-2 sentences). Encourage them to stay connected or go deeper together. Not a question — a nudge.
+
+Return ONLY valid JSON. No preamble, no markdown code fences:
+{
+  "thread": "...",
+  "person1Answer": "...",
+  "person2Answer": "...",
+  "person1Window": "...",
+  "person2Window": "...",
+  "reflection": "...",
+  "continuePrompt": "..."
+}`
+
+          let result
+
+          if (audioBase64 && audioMimeType) {
+            result = await model.generateContent([
+              {
+                inlineData: {
+                  mimeType: audioMimeType,
+                  data: audioBase64,
+                },
+              },
+              {
+                text: `This is an audio recording of a conversation between two people who just met.\n\n${context}\n\n${outputInstructions}`,
+              },
+            ])
+          } else {
+            result = await model.generateContent([
+              {
+                text: `Here is a written summary of a conversation between two people who just met.\n\n${context}\n\nConversation:\n${transcript || '(no conversation summary provided)'}\n\n${outputInstructions}`,
+              },
+            ])
+          }
+
+          const raw = result.response.text().trim()
+          const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+          const keepsake = JSON.parse(cleaned)
+
+          if (!keepsake.thread || !keepsake.reflection) throw new Error('Missing required fields')
+
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(keepsake))
+        } catch (err) {
+          console.error('[Summarize conversation dev error]', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'generation_failed', detail: err.message }))
+        }
+      })
+    })
+
+    server.middlewares.use('/api/schedule-followup', async (req, res) => {
+      if (req.method !== 'POST') { res.statusCode = 405; res.end(); return }
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const {
+            email1,
+            email2,
+            person1,
+            person2,
+            topic,
+            halfwayPoint,
+            reflection,
+            continuePrompt,
+            rounds = [],
+            halfwayQuestion,
+          } = JSON.parse(body)
+
+          const apiKey = process.env.GEMINI_API_KEY
+          const resendApiKey = process.env.RESEND_API_KEY
+          if (!apiKey) throw new Error('No GEMINI_API_KEY in .env.local')
+          if (!resendApiKey) throw new Error('No RESEND_API_KEY in .env.local')
+
+          const genAI = new GoogleGenerativeAI(apiKey)
+          const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+          const sharedQuestion = halfwayPoint || halfwayQuestion || continuePrompt || 'Something between them still felt unfinished.'
+          const promptTopic = topic?.name || rounds[0]?.topic || 'their shared conversation'
+          const directionalContext = topic?.question1 && topic?.question2
+            ? `The AI asked them these questions:\n- To Person 1: "${topic.question1}"\n- To Person 2: "${topic.question2}"`
+            : rounds.length
+              ? rounds.map(r => `On "${r.topic}": ${person1.city || person1.country} said "${r.answer1}" and ${person2.city || person2.country} said "${r.answer2}"`).join('\n')
+              : 'Use the shared halfway point below as the main context.'
+
+          const prompt = `
+Two people had a meaningful conversation and should receive one follow-up question sometime next month.
+
+Person 1 is from ${person1.city || ''}, ${person1.country}.
+Person 2 is from ${person2.city || ''}, ${person2.country}.
+
+Topic: ${promptTopic}
+Their halfway point was: "${sharedQuestion}"
+Closing reflection: "${reflection || ''}"
+
+${directionalContext}
+
+Generate ONE short follow-up question that should feel like the conversation quietly resumed on its own.
+
+The question should:
+- Reference something specific from what they shared, unexpectedly
+- Feel serendipitous, warm, and a little uncanny in the best way
+- Be a natural continuation, not a recap
+- Be philosophical but personal, not abstract
+- Be 1-2 sentences maximum
+
+Return only the question. No preamble.
+`
+
+          let followUpQuestion = 'What part of that conversation is still quietly following you around — and what would happen if you actually answered it together?'
+
+          try {
+            const result = await model.generateContent([{ text: prompt }])
+            followUpQuestion = result.response.text().trim()
+          } catch {
+            // Use fallback
+          }
+
+          const daysFromNow = Math.floor(Math.random() * 25) + 21
+          const scheduledAt = new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000).toISOString()
+          const resend = new Resend(resendApiKey)
+
+          const emailBody = `
+<div style="font-family: Georgia, serif; max-width: 500px; margin: 0 auto; padding: 40px 20px; color: #2C1810; background: #F5EFE0;">
+  <p style="font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #9B7653; margin-bottom: 32px;">✦ Halfway</p>
+
+  <p style="font-size: 14px; color: #2C1810; opacity: 0.5; margin-bottom: 8px;">${person1.city || person1.country} · ${person2.city || person2.country}</p>
+
+  <p style="font-size: 13px; color: #2C1810; opacity: 0.4; margin-bottom: 40px; font-style: italic;">Your halfway point was: "${sharedQuestion}"</p>
+
+  <p style="font-size: 15px; line-height: 1.7; color: #2C1810; margin-bottom: 28px;">
+    ${reflection || continuePrompt || 'Something worth keeping happened in this conversation.'}
+  </p>
+
+  <p style="font-size: 12px; color: #9B7653; opacity: 0.7;">You asked Halfway to send this back to you so you would not lose it.</p>
+</div>
+`
+
+          const followUpEmailBody = `
+<div style="font-family: Georgia, serif; max-width: 500px; margin: 0 auto; padding: 40px 20px; color: #2C1810; background: #F5EFE0;">
+  <p style="font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #9B7653; margin-bottom: 32px;">✦ Halfway — Later</p>
+
+  <p style="font-size: 14px; color: #2C1810; opacity: 0.5; margin-bottom: 8px;">${person1.city || person1.country} · ${person2.city || person2.country}</p>
+
+  <p style="font-size: 13px; color: #2C1810; opacity: 0.4; margin-bottom: 40px; font-style: italic;">Your halfway point was: "${sharedQuestion}"</p>
+
+  <p style="font-size: 22px; font-style: italic; line-height: 1.5; color: #2C1810; border-left: 2px solid #C4622D; padding-left: 20px; margin-bottom: 40px;">
+    "${followUpQuestion}"
+  </p>
+
+  <p style="font-size: 12px; color: #9B7653; opacity: 0.7;">This question arrived on its own schedule.</p>
+</div>
+`
+
+          const emails = [email1, email2].filter(Boolean)
+          await Promise.all(emails.flatMap(email => ([
+            resend.emails.send({
+              from: 'Halfway <hello@halfwayapp.co>',
+              to: email,
+              subject: 'Your Halfway note',
+              html: emailBody,
+            }),
+            resend.emails.send({
+              from: 'Halfway <hello@halfwayapp.co>',
+              to: email,
+              subject: 'A question for the conversation you never really finished',
+              html: followUpEmailBody,
+              scheduledAt,
+            }),
+          ])))
+
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ scheduled: true, daysFromNow }))
+        } catch (err) {
+          console.error('[Schedule followup dev error]', err.message)
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'scheduling_failed', detail: err.message }))
         }
       })
     })
